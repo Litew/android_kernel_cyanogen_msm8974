@@ -2249,13 +2249,6 @@ dput_out:
 	return retval;
 }
 
-
-static void free_mnt_ns(struct mnt_namespace *ns)
-{
-	put_user_ns(ns->user_ns);
-	kfree(ns);
-}
-
 /*
  * Assign a sequence number so we can detect when we attempt to bind
  * mount a reference to an older mount namespace into the current
@@ -2265,7 +2258,7 @@ static void free_mnt_ns(struct mnt_namespace *ns)
  */
 static atomic64_t mnt_ns_seq = ATOMIC64_INIT(1);
 
-static struct mnt_namespace *alloc_mnt_ns(struct user_namespace *user_ns)
+static struct mnt_namespace *alloc_mnt_ns(void)
 {
 	struct mnt_namespace *new_ns;
 
@@ -2745,8 +2738,7 @@ static int mntns_install(struct nsproxy *nsproxy, void *ns)
 	struct mnt_namespace *mnt_ns = ns;
 	struct path root;
 
-	if (!ns_capable(mnt_ns->user_ns, CAP_SYS_ADMIN) ||
-		!nsown_capable(CAP_SYS_CHROOT))
+	if (!capable(CAP_SYS_ADMIN) || !capable(CAP_SYS_CHROOT))
 		return -EINVAL;
 
 	if (fs->users != 1)
