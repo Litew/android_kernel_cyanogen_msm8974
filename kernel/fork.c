@@ -1571,12 +1571,6 @@ long do_fork(unsigned long clone_flags,
 	if (clone_flags & CLONE_NEWUSER) {
 		if (clone_flags & CLONE_THREAD)
 			return -EINVAL;
-		/* hopefully this check will go away when userns support is
-		 * complete
-		 */
-		if (!capable(CAP_SYS_ADMIN) || !capable(CAP_SETUID) ||
-				!capable(CAP_SETGID))
-			return -EPERM;
 	}
 
 	/*
