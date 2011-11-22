@@ -584,9 +584,221 @@ ssize_t proc_gid_map_write(struct file *file, const char __user *buf, size_t siz
 			 &ns->gid_map, &ns->parent->gid_map);
 }
 
+#ifdef CONFIG_KEYS
+static struct cred *id_permissions_cache;
+
+/*
+ * Be stringent about the data userspace is allowed to instantiate.  So
+ * we can assume the data is good elsewhere.
+ *
+ * The data must be a NUL-terminated string, with the NULL char accouted in
+ * datalen.  The data must consist of ascending ranges of non-overlapping uids
+ * encoded as uid<space>length[<space>uid<space>lenghth[...]]
+ */
+static int id_permission_instantiate(struct key *key, const void *data, size_t datalen)
+{
+	const char *str = data;
+	char *pos;
+	u32 first, count, last, last_count;
+
+	/* Verify I have a '\0' terminated string */
+	if (!str || datalen <= 1 || str[datalen - 1] != '\0')
+		return -EINVAL;
+
+	/* Verify that I have set of ranges in the key */
+	last = 0;
+	last_count = 0;
+	for(pos = (char*)str; pos; pos++) {
+		first = simple_strtoul(pos, &pos, 10);
+		if (!isspace(*pos))
+			return -EINVAL;
+		pos++;
+		count = simple_strtoul(pos, &pos, 10);
+		if (!isspace(*pos) && *pos)
+			return -EINVAL;
+		/* Verify I have a good starting value */
+		if (first == (u32) -1)
+			return -EINVAL;
+		/* Verify count is non-zero does not cause the extent to wrap */
+		if ((first + count) <= first)
+			return -EINVAL;
+		/* Verify this range of uids is greator than the last range */
+		if (last_count && ((last + last_count) > first))
+			return -EINVAL;
+		if (!isspace(*pos))
+			break;
+		last = first;
+		last_count = count;
+	}
+	/* Verify we don't have garabage at the end of the string */
+	if (*pos != '\0')
+		return -EINVAL;
+
+	return user_instantiate(key, data, datalen);
+}
+
+static struct key_type key_type_id_permissions = {
+	.name		= "id_permissions",
+	.instantiate	= id_permission_instantiate,
+	.match		= user_match,
+	.revoke		= user_revoke,
+	.destroy	= user_destroy,
+	.describe	= user_describe,
+	.read		= user_read,
+};
+
+static bool new_idmap_permitted_by_key(struct user_namespace *ns,
+				       int cap_setid, struct uid_gid_map *new_map)
+{
+	const struct cred *saved_cred;
+	struct key *rkey;
+	char description[32];
+	struct user_key_payload *payload;
+	bool permitted = false;
+	char *pos;
+	u32 first, count, last;
+	unsigned idx;
+	int ret;
+
+	/* Ensure I don't have junk in cap_setid */
+	switch (cap_setid) {
+	case CAP_SETUID:
+	case CAP_SETGID:
+		break;
+	default:
+		return false;
+	}
+
+	/* Describe the desired key.
+	 * The map of allowed uid or gids for the specified user.
+	 */
+	snprintf(description, sizeof(description),
+		"%s:%u",
+		((cap_setid == CAP_SETUID)? "uids" : "gids"),
+		from_kuid(ns->parent, ns->owner));
+
+	/* Lookup the desired key */
+	saved_cred = override_creds(id_permissions_cache);
+	rkey = request_key(&key_type_id_permissions, description, "");
+	revert_creds(saved_cred);
+	if (IS_ERR(rkey))
+		return false;
+
+	rcu_read_lock();
+	rkey->perm |= KEY_USR_VIEW;
+
+	ret = key_validate(rkey);
+	if (ret < 0)
+		goto out;
+
+	payload = rcu_dereference(rkey->payload.data);
+	if (IS_ERR_OR_NULL(payload))
+		goto out;
+
+	/* Ensure the lower ids from new_map are allowed. */
+	for (idx = 0; idx < new_map->nr_extents; idx++) {
+		bool extent_ok = false;
+		u32 efirst, elast;
+		efirst = new_map->extent[idx].lower_first;
+		elast = efirst + new_map->extent[idx].count - 1;
+		/* Walk through the key and verify that the new extent data is
+		 * in a permitted range.
+		 */
+		for (pos = payload->data; pos && *pos;) {
+			first = simple_strtoul(pos, &pos, 10);
+			/* skip the space */
+			pos++;
+			count = simple_strtoul(pos, &pos, 10);
+			if (*pos)
+				pos++;
+			last = first + count - 1;
+			if (first <= efirst && efirst <= last &&
+			    first <= elast && elast <= last)
+			{
+				extent_ok = true;
+				break;
+			}
+		}
+		if (!extent_ok)
+			goto out;
+	}
+	/* All of the mapped to ids are permitted. */
+	permitted = true;
+out:
+	rcu_read_unlock();
+	key_put(rkey);
+	return permitted;
+}
+
+static __init int id_permissions_init(void)
+{
+	struct cred *cred;
+	struct key *keyring;
+	int ret;
+
+	/* Create an override credential set with a special thread keyring in
+	 * which setuid permissions are cached.
+	 *
+	 * This is used to prevent malicious permissions rom being installed
+	 * with add_key().
+	 */
+	cred = prepare_kernel_cred(NULL);
+	if (!cred)
+		return -ENOMEM;
+
+	keyring = key_alloc(&key_type_keyring, ".id_permissions",
+			    cred->uid, cred->gid, cred,
+			    (KEY_POS_ALL & ~KEY_POS_SETATTR) |
+			    KEY_USR_VIEW | KEY_USR_READ,
+			    KEY_ALLOC_NOT_IN_QUOTA);
+	if (IS_ERR(keyring)) {
+		ret = PTR_ERR(keyring);
+		goto failed_put_cred;
+	}
+
+	ret = key_instantiate_and_link(keyring, NULL, 0, NULL, NULL);
+	if (ret < 0)
+		goto failed_put_key;
+
+	ret = register_key_type(&key_type_id_permissions);
+	if (ret < 0)
+		goto failed_put_key;
+
+	/* Instruct request_key to use this special keyring as a cache for
+	 * the results it looks up.
+	 */
+	cred->thread_keyring = keyring;
+	cred->jit_keyring = KEY_REQKEY_DEFL_THREAD_KEYRING;
+	id_permissions_cache = cred;
+
+	return 0;
+
+failed_put_key:
+	key_put(keyring);
+failed_put_cred:
+	put_cred(cred);
+	return ret;
+}
+
+#else
+static bool new_idmap_permitted_by_key(struct user_namespace *ns,
+	int cap_setid, struct uid_gid_map *new_map)
+{
+	return false;
+}
+
+static __init int id_permissions_init(void)
+{
+	return 0;
+}
+#endif /* CONFIG_KEYS */
+
 static bool new_idmap_permitted(struct user_namespace *ns, int cap_setid,
 				struct uid_gid_map *new_map)
 {
+	if (new_idmap_permitted_by_key(ns, cap_setid, new_map))
+		return true;
+
 	/* Allow the specified ids if we have the appropriate capability
 	 * (CAP_SETUID or CAP_SETGID) over the parent user namespace.
 	 */
@@ -599,6 +811,7 @@ static bool new_idmap_permitted(struct user_namespace *ns, int cap_setid,
 static __init int user_namespaces_init(void)
 {
 	user_ns_cachep = KMEM_CACHE(user_namespace, SLAB_PANIC);
-	return 0;
+
+	return id_permissions_init();
 }
 module_init(user_namespaces_init);
