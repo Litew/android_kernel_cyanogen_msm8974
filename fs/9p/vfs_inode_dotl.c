@@ -63,9 +63,9 @@ static gid_t v9fs_get_fsgid_for_create(struct inode *dir_inode)
 
 	if (dir_inode->i_mode & S_ISGID) {
 		/* set_gid bit is set.*/
-		return dir_inode->i_gid;
+		return i_gid_read(dir_inode);
 	}
-	return current_fsgid();
+	return from_kgid(&init_user_ns, current_fsgid());
 }
 
 /**
@@ -584,8 +584,8 @@ int v9fs_vfs_setattr_dotl(struct dentry *dentry, struct iattr *iattr)
 
 	p9attr.valid = v9fs_mapped_iattr_valid(iattr->ia_valid);
 	p9attr.mode = iattr->ia_mode;
-	p9attr.uid = iattr->ia_uid;
-	p9attr.gid = iattr->ia_gid;
+	p9attr.uid = from_kuid(&init_user_ns, iattr->ia_uid);
+	p9attr.gid = from_kgid(&init_user_ns, iattr->ia_gid);
 	p9attr.size = iattr->ia_size;
 	p9attr.atime_sec = iattr->ia_atime.tv_sec;
 	p9attr.atime_nsec = iattr->ia_atime.tv_nsec;
@@ -643,8 +643,8 @@ v9fs_stat2inode_dotl(struct p9_stat_dotl *stat, struct inode *inode)
 		inode->i_mtime.tv_nsec = stat->st_mtime_nsec;
 		inode->i_ctime.tv_sec = stat->st_ctime_sec;
 		inode->i_ctime.tv_nsec = stat->st_ctime_nsec;
-		inode->i_uid = stat->st_uid;
-		inode->i_gid = stat->st_gid;
+		i_uid_write(inode, stat->st_uid);
+		i_gid_write(inode, stat->st_gid);
 		set_nlink(inode, stat->st_nlink);
 
 		mode = stat->st_mode & S_IALLUGO;
@@ -667,9 +667,9 @@ v9fs_stat2inode_dotl(struct p9_stat_dotl *stat, struct inode *inode)
 			inode->i_ctime.tv_nsec = stat->st_ctime_nsec;
 		}
 		if (stat->st_result_mask & P9_STATS_UID)
-			inode->i_uid = stat->st_uid;
+			i_uid_write(inode, stat->st_uid);
 		if (stat->st_result_mask & P9_STATS_GID)
-			inode->i_gid = stat->st_gid;
+			i_gid_write(inode, stat->st_gid);
 		if (stat->st_result_mask & P9_STATS_NLINK)
 			set_nlink(inode, stat->st_nlink);
 		if (stat->st_result_mask & P9_STATS_MODE) {

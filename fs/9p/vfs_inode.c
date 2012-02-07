@@ -1111,10 +1111,10 @@ static int v9fs_vfs_setattr(struct dentry *dentry, struct iattr *iattr)
 
 	if (v9fs_proto_dotu(v9ses)) {
 		if (iattr->ia_valid & ATTR_UID)
-			wstat.n_uid = iattr->ia_uid;
+			wstat.n_uid = from_kuid(&init_user_ns, iattr->ia_uid);
 
 		if (iattr->ia_valid & ATTR_GID)
-			wstat.n_gid = iattr->ia_gid;
+			wstat.n_gid = from_kgid(&init_user_ns, iattr->ia_gid);
 	}
 
 	/* Write all dirty data */
@@ -1161,12 +1161,12 @@ v9fs_stat2inode(struct p9_wstat *stat, struct inode *inode,
 	inode->i_mtime.tv_sec = stat->mtime;
 	inode->i_ctime.tv_sec = stat->mtime;
 
-	inode->i_uid = v9ses->dfltuid;
-	inode->i_gid = v9ses->dfltgid;
+	i_uid_write(inode, v9ses->dfltuid);
+	i_gid_write(inode, v9ses->dfltgid);
 
 	if (v9fs_proto_dotu(v9ses)) {
-		inode->i_uid = stat->n_uid;
-		inode->i_gid = stat->n_gid;
+		i_uid_write(inode, stat->n_uid);
+		i_gid_write(inode, stat->n_gid);
 	}
 	if ((S_ISREG(inode->i_mode)) || (S_ISDIR(inode->i_mode))) {
 		if (v9fs_proto_dotu(v9ses) && (stat->extension[0] != '\0')) {

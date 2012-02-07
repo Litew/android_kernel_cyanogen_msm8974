@@ -868,10 +868,6 @@ config UIDGID_CONVERTED
 	depends on IMA = n
 	depends on EVM = n
 
-	# Networking
-	depends on NET_9P = n
-	depends on NET_KEY = n
-
 	# Filesystems
 	depends on USB_DEVICEFS = n
 	depends on USB_GADGETFS = n
@@ -879,7 +875,6 @@ config UIDGID_CONVERTED
 	depends on DEVTMPFS = n
 	depends on XENFS = n
 
-	depends on 9P_FS = n
 	depends on ADFS_FS = n
 	depends on AFFS_FS = n
 	depends on AFS_FS = n

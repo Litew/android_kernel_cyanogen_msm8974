@@ -243,7 +243,7 @@ struct p9_fid *v9fs_fid_lookup(struct dentry *dentry)
 	case V9FS_ACCESS_SINGLE:
 	case V9FS_ACCESS_USER:
 	case V9FS_ACCESS_CLIENT:
-		uid = current_fsuid();
+		uid = from_kuid(&init_user_ns, current_fsuid());
 		any = 0;
 		break;
 
