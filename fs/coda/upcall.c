@@ -52,7 +52,7 @@ static void *alloc_upcall(int opcode, int size)
         inp->ih.opcode = opcode;
 	inp->ih.pid = current->pid;
 	inp->ih.pgid = task_pgrp_nr(current);
-	inp->ih.uid = current_fsuid();
+	inp->ih.uid = from_kuid(&init_user_ns, current_fsuid());
 
 	return (void*)inp;
 }
