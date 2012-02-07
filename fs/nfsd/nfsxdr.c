@@ -4,6 +4,7 @@
  * Copyright (C) 1995, 1996 Olaf Kirch <okir@monad.swb.de>
  */
 
+#include <linux/user_namespace.h>
 #include "xdr.h"
 #include "auth.h"
 
@@ -101,11 +102,11 @@ decode_sattr(__be32 *p, struct iattr *iap)
 	}
 	if ((tmp = ntohl(*p++)) != (u32)-1) {
 		iap->ia_valid |= ATTR_UID;
-		iap->ia_uid = tmp;
+		iap->ia_uid = make_kuid(&init_user_ns, tmp);
 	}
 	if ((tmp = ntohl(*p++)) != (u32)-1) {
 		iap->ia_valid |= ATTR_GID;
-		iap->ia_gid = tmp;
+		iap->ia_gid = make_kgid(&init_user_ns, tmp);
 	}
 	if ((tmp = ntohl(*p++)) != (u32)-1) {
 		iap->ia_valid |= ATTR_SIZE;
@@ -151,8 +152,8 @@ encode_fattr(struct svc_rqst *rqstp, __be32 *p, struct svc_fh *fhp,
 	*p++ = htonl(nfs_ftypes[type >> 12]);
 	*p++ = htonl((u32) stat->mode);
 	*p++ = htonl((u32) stat->nlink);
-	*p++ = htonl((u32) nfsd_ruid(rqstp, stat->uid));
-	*p++ = htonl((u32) nfsd_rgid(rqstp, stat->gid));
+	*p++ = htonl((u32) nfsd_ruid(rqstp, from_kuid(&init_user_ns, stat->uid)));
+	*p++ = htonl((u32) nfsd_rgid(rqstp, from_kgid(&init_user_ns, stat->gid)));
 
 	if (S_ISLNK(type) && stat->size > NFS_MAXPATHLEN) {
 		*p++ = htonl(NFS_MAXPATHLEN);

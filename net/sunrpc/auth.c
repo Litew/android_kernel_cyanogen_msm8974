@@ -425,8 +425,8 @@ rpcauth_lookupcred(struct rpc_auth *auth, int flags)
 		auth->au_ops->au_name);
 
 	memset(&acred, 0, sizeof(acred));
-	acred.uid = cred->fsuid;
-	acred.gid = cred->fsgid;
+	acred.uid = from_kuid(&init_user_ns, cred->fsuid);
+	acred.gid = from_kgid(&init_user_ns, cred->fsgid);
 	acred.group_info = get_group_info(((struct cred *)cred)->group_info);
 
 	ret = auth->au_ops->lookup_cred(auth, &acred, flags);

@@ -23,6 +23,8 @@ int nfsd_setuser(struct svc_rqst *rqstp, struct svc_export *exp)
 	struct group_info *rqgi;
 	struct group_info *gi;
 	struct cred *new;
+	uid_t new_fsuid;
+	gid_t new_fsgid;
 	int i;
 	int flags = nfsexp_flags(rqstp, exp);
 	int ret;
@@ -35,22 +37,22 @@ int nfsd_setuser(struct svc_rqst *rqstp, struct svc_export *exp)
 	if (!new)
 		return -ENOMEM;
 
-	new->fsuid = rqstp->rq_cred.cr_uid;
-	new->fsgid = rqstp->rq_cred.cr_gid;
+	new_fsuid = rqstp->rq_cred.cr_uid;
+	new_fsgid = rqstp->rq_cred.cr_gid;
 
 	rqgi = rqstp->rq_cred.cr_group_info;
 
 	if (flags & NFSEXP_ALLSQUASH) {
-		new->fsuid = exp->ex_anon_uid;
-		new->fsgid = exp->ex_anon_gid;
+		new_fsuid = exp->ex_anon_uid;
+		new_fsgid = exp->ex_anon_gid;
 		gi = groups_alloc(0);
 		if (!gi)
 			goto oom;
 	} else if (flags & NFSEXP_ROOTSQUASH) {
-		if (!new->fsuid)
-			new->fsuid = exp->ex_anon_uid;
-		if (!new->fsgid)
-			new->fsgid = exp->ex_anon_gid;
+		if (!new_fsuid)
+			new_fsuid = exp->ex_anon_uid;
+		if (!new_fsgid)
+			new_fsgid = exp->ex_anon_gid;
 
 		gi = groups_alloc(rqgi->ngroups);
 		if (!gi)
@@ -66,21 +68,23 @@ int nfsd_setuser(struct svc_rqst *rqstp, struct svc_export *exp)
 		gi = get_group_info(rqgi);
 	}
 
-	if (new->fsuid == (uid_t) -1)
-		new->fsuid = exp->ex_anon_uid;
-	if (new->fsgid == (gid_t) -1)
-		new->fsgid = exp->ex_anon_gid;
+	if (new_fsuid == (uid_t) -1)
+		new_fsuid = exp->ex_anon_uid;
+	if (new_fsgid == (gid_t) -1)
+		new_fsgid = exp->ex_anon_gid;
 
 	ret = set_groups(new, gi);
 	put_group_info(gi);
 	if (ret < 0)
 		goto error;
 
-	if (new->fsuid)
+	if (new_fsuid)
 		new->cap_effective = cap_drop_nfsd_set(new->cap_effective);
 	else
 		new->cap_effective = cap_raise_nfsd_set(new->cap_effective,
 							new->cap_permitted);
+	new->fsuid = make_kuid(&init_user_ns, new_fsuid);
+	new->fsgid = make_kgid(&init_user_ns, new_fsgid);
 	validate_process_creds();
 	put_cred(override_creds(new));
 	put_cred(new);

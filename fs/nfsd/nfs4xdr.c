@@ -312,26 +312,30 @@ nfsd4_decode_fattr(struct nfsd4_compoundargs *argp, u32 *bmval,
 		iattr->ia_valid |= ATTR_MODE;
 	}
 	if (bmval[1] & FATTR4_WORD1_OWNER) {
+		uid_t ia_uid;
 		READ_BUF(4);
 		len += 4;
 		READ32(dummy32);
 		READ_BUF(dummy32);
 		len += (XDR_QUADLEN(dummy32) << 2);
 		READMEM(buf, dummy32);
-		if ((status = nfsd_map_name_to_uid(argp->rqstp, buf, dummy32, &iattr->ia_uid)))
+		if ((status = nfsd_map_name_to_uid(argp->rqstp, buf, dummy32, &ia_uid)))
 			return status;
 		iattr->ia_valid |= ATTR_UID;
+		iattr->ia_uid = make_kuid(&init_user_ns, ia_uid);
 	}
 	if (bmval[1] & FATTR4_WORD1_OWNER_GROUP) {
+		gid_t ia_gid;
 		READ_BUF(4);
 		len += 4;
 		READ32(dummy32);
 		READ_BUF(dummy32);
 		len += (XDR_QUADLEN(dummy32) << 2);
 		READMEM(buf, dummy32);
-		if ((status = nfsd_map_name_to_gid(argp->rqstp, buf, dummy32, &iattr->ia_gid)))
+		if ((status = nfsd_map_name_to_gid(argp->rqstp, buf, dummy32, &ia_gid)))
 			return status;
 		iattr->ia_valid |= ATTR_GID;
+		iattr->ia_gid = make_kgid(&init_user_ns, ia_gid);
 	}
 	if (bmval[1] & FATTR4_WORD1_TIME_ACCESS_SET) {
 		READ_BUF(4);
@@ -1928,7 +1932,7 @@ static u32 nfs4_file_type(umode_t mode)
 }
 
 static __be32
-nfsd4_encode_name(struct svc_rqst *rqstp, int whotype, uid_t id, int group,
+nfsd4_encode_name(struct svc_rqst *rqstp, int whotype, __u32 id, int group,
 			__be32 **p, int *buflen)
 {
 	int status;
@@ -1950,14 +1954,16 @@ nfsd4_encode_name(struct svc_rqst *rqstp, int whotype, uid_t id, int group,
 }
 
 static inline __be32
-nfsd4_encode_user(struct svc_rqst *rqstp, uid_t uid, __be32 **p, int *buflen)
+nfsd4_encode_user(struct svc_rqst *rqstp, kuid_t user, __be32 **p, int *buflen)
 {
+	uid_t uid = from_kuid(&init_user_ns, user);
 	return nfsd4_encode_name(rqstp, NFS4_ACL_WHO_NAMED, uid, 0, p, buflen);
 }
 
 static inline __be32
-nfsd4_encode_group(struct svc_rqst *rqstp, uid_t gid, __be32 **p, int *buflen)
+nfsd4_encode_group(struct svc_rqst *rqstp, kgid_t group, __be32 **p, int *buflen)
 {
+	gid_t gid = from_kgid(&init_user_ns, group);
 	return nfsd4_encode_name(rqstp, NFS4_ACL_WHO_NAMED, gid, 1, p, buflen);
 }
 

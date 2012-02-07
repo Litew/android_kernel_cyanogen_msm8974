@@ -7,6 +7,7 @@
  */
 
 #include <linux/namei.h>
+#include <linux/user_namespace.h>
 #include "xdr3.h"
 #include "auth.h"
 
@@ -104,11 +105,11 @@ decode_sattr3(__be32 *p, struct iattr *iap)
 	}
 	if (*p++) {
 		iap->ia_valid |= ATTR_UID;
-		iap->ia_uid = ntohl(*p++);
+		iap->ia_uid = make_kuid(&init_user_ns, ntohl(*p++));
 	}
 	if (*p++) {
 		iap->ia_valid |= ATTR_GID;
-		iap->ia_gid = ntohl(*p++);
+		iap->ia_gid = make_kgid(&init_user_ns, ntohl(*p++));
 	}
 	if (*p++) {
 		u64	newsize;
@@ -165,8 +166,8 @@ encode_fattr3(struct svc_rqst *rqstp, __be32 *p, struct svc_fh *fhp,
 	*p++ = htonl(nfs3_ftypes[(stat->mode & S_IFMT) >> 12]);
 	*p++ = htonl((u32) stat->mode);
 	*p++ = htonl((u32) stat->nlink);
-	*p++ = htonl((u32) nfsd_ruid(rqstp, stat->uid));
-	*p++ = htonl((u32) nfsd_rgid(rqstp, stat->gid));
+	*p++ = htonl((u32) nfsd_ruid(rqstp, from_kuid(&init_user_ns, stat->uid)));
+	*p++ = htonl((u32) nfsd_rgid(rqstp, from_kgid(&init_user_ns, stat->gid)));
 	if (S_ISLNK(stat->mode) && stat->size > NFS3_MAXPATHLEN) {
 		p = xdr_encode_hyper(p, (u64) NFS3_MAXPATHLEN);
 	} else {
