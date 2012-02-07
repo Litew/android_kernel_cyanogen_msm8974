@@ -355,7 +355,7 @@ xfs_xattr_acl_set(struct dentry *dentry, const char *name,
 		return -EINVAL;
 	if (type == ACL_TYPE_DEFAULT && !S_ISDIR(inode->i_mode))
 		return value ? -EACCES : 0;
-	if ((current_fsuid() != inode->i_uid) && !capable(CAP_FOWNER))
+	if ((!uid_eq(current_fsuid(), inode->i_uid)) && !capable(CAP_FOWNER))
 		return -EPERM;
 
 	if (!value)

@@ -996,8 +996,8 @@ xfs_ialloc(
 	ip->i_d.di_onlink = 0;
 	ip->i_d.di_nlink = nlink;
 	ASSERT(ip->i_d.di_nlink == nlink);
-	ip->i_d.di_uid = current_fsuid();
-	ip->i_d.di_gid = current_fsgid();
+	ip->i_d.di_uid = from_kuid(&init_user_ns, current_fsuid());
+	ip->i_d.di_gid = from_kgid(&init_user_ns, current_fsgid());
 	xfs_set_projid(ip, prid);
 	memset(&(ip->i_d.di_pad[0]), 0, sizeof(ip->i_d.di_pad));
 
@@ -1036,7 +1036,7 @@ xfs_ialloc(
 	 */
 	if ((irix_sgid_inherit) &&
 	    (ip->i_d.di_mode & S_ISGID) &&
-	    (!in_group_p((gid_t)ip->i_d.di_gid))) {
+	    (!in_group_p(make_kgid(&init_user_ns, ip->i_d.di_gid)))) {
 		ip->i_d.di_mode &= ~S_ISGID;
 	}
 

@@ -422,8 +422,8 @@ xfs_vn_getattr(
 	stat->dev = inode->i_sb->s_dev;
 	stat->mode = ip->i_d.di_mode;
 	stat->nlink = ip->i_d.di_nlink;
-	stat->uid = ip->i_d.di_uid;
-	stat->gid = ip->i_d.di_gid;
+	stat->uid = make_kuid(&init_user_ns, ip->i_d.di_uid);
+	stat->gid = make_kgid(&init_user_ns, ip->i_d.di_gid);
 	stat->ino = ip->i_ino;
 	stat->atime = inode->i_atime;
 	stat->mtime = inode->i_mtime;
@@ -499,13 +499,13 @@ xfs_setattr_nonsize(
 		uint	qflags = 0;
 
 		if ((mask & ATTR_UID) && XFS_IS_UQUOTA_ON(mp)) {
-			uid = iattr->ia_uid;
+			uid = from_kuid(&init_user_ns, iattr->ia_uid);
 			qflags |= XFS_QMOPT_UQUOTA;
 		} else {
 			uid = ip->i_d.di_uid;
 		}
 		if ((mask & ATTR_GID) && XFS_IS_GQUOTA_ON(mp)) {
-			gid = iattr->ia_gid;
+			gid = from_kgid(&init_user_ns, iattr->ia_gid);
 			qflags |= XFS_QMOPT_GQUOTA;
 		}  else {
 			gid = ip->i_d.di_gid;
@@ -543,8 +543,8 @@ xfs_setattr_nonsize(
 		 */
 		iuid = ip->i_d.di_uid;
 		igid = ip->i_d.di_gid;
-		gid = (mask & ATTR_GID) ? iattr->ia_gid : igid;
-		uid = (mask & ATTR_UID) ? iattr->ia_uid : iuid;
+		gid = (mask & ATTR_GID) ? from_kgid(&init_user_ns, iattr->ia_gid) : igid;
+		uid = (mask & ATTR_UID) ? from_kuid(&init_user_ns, iattr->ia_uid) : iuid;
 
 		/*
 		 * Do a quota reservation only if uid/gid is actually
@@ -590,7 +590,7 @@ xfs_setattr_nonsize(
 							&ip->i_udquot, udqp);
 			}
 			ip->i_d.di_uid = uid;
-			inode->i_uid = uid;
+			i_uid_write(inode, uid);
 		}
 		if (igid != gid) {
 			if (XFS_IS_QUOTA_RUNNING(mp) && XFS_IS_GQUOTA_ON(mp)) {
@@ -601,7 +601,7 @@ xfs_setattr_nonsize(
 							&ip->i_gdquot, gdqp);
 			}
 			ip->i_d.di_gid = gid;
-			inode->i_gid = gid;
+			i_gid_write(inode, gid);
 		}
 	}
 
@@ -1111,8 +1111,8 @@ xfs_setup_inode(
 
 	inode->i_mode	= ip->i_d.di_mode;
 	set_nlink(inode, ip->i_d.di_nlink);
-	inode->i_uid	= ip->i_d.di_uid;
-	inode->i_gid	= ip->i_d.di_gid;
+	i_uid_write(inode, ip->i_d.di_uid);
+	i_gid_write(inode, ip->i_d.di_gid);
 
 	switch (inode->i_mode & S_IFMT) {
 	case S_IFBLK:
