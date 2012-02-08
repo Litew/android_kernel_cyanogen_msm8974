@@ -391,12 +391,12 @@ static int parse_options(char *options, struct omfs_sb_info *sbi)
 		case Opt_uid:
 			if (match_int(&args[0], &option))
 				return 0;
-			sbi->s_uid = option;
+			sbi->s_uid = make_kuid(current_user_ns(), option);
 			break;
 		case Opt_gid:
 			if (match_int(&args[0], &option))
 				return 0;
-			sbi->s_gid = option;
+			sbi->s_gid = make_kgid(current_user_ns(), option);
 			break;
 		case Opt_umask:
 			if (match_octal(&args[0], &option))
