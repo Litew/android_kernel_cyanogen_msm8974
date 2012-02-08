@@ -1161,8 +1161,8 @@ static int __send_cap(struct ceph_mds_client *mdsc, struct ceph_cap *cap,
 	mtime = inode->i_mtime;
 	atime = inode->i_atime;
 	time_warp_seq = ci->i_time_warp_seq;
-	uid = inode->i_uid;
-	gid = inode->i_gid;
+	uid = i_uid_read(inode);
+	gid = i_gid_read(inode);
 	mode = inode->i_mode;
 
 	if (flushing & CEPH_CAP_XATTR_EXCL) {
@@ -2353,10 +2353,10 @@ static void handle_cap_grant(struct inode *inode, struct ceph_mds_caps *grant,
 
 	if ((issued & CEPH_CAP_AUTH_EXCL) == 0) {
 		inode->i_mode = le32_to_cpu(grant->mode);
-		inode->i_uid = le32_to_cpu(grant->uid);
-		inode->i_gid = le32_to_cpu(grant->gid);
+		i_uid_write(inode, le32_to_cpu(grant->uid));
+		i_gid_write(inode, le32_to_cpu(grant->gid));
 		dout("%p mode 0%o uid.gid %d.%d\n", inode, inode->i_mode,
-		     inode->i_uid, inode->i_gid);
+		     i_uid_read(inode), i_gid_read(inode));
 	}
 
 	if ((issued & CEPH_CAP_LINK_EXCL) == 0)

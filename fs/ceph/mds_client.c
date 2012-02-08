@@ -580,8 +580,8 @@ static void __register_request(struct ceph_mds_client *mdsc,
 	ceph_mdsc_get_request(req);
 	__insert_request(mdsc, req);
 
-	req->r_uid = current_fsuid();
-	req->r_gid = current_fsgid();
+	req->r_uid = from_kuid(&init_user_ns, current_fsuid());
+	req->r_gid = from_kgid(&init_user_ns, current_fsgid());
 
 	if (dir) {
 		struct ceph_inode_info *ci = ceph_inode(dir);
