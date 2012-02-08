@@ -87,8 +87,8 @@ static void xdr_decode_AFSFetchStatus(const __be32 **_bp,
 		if (changed && !test_bit(AFS_VNODE_UNSET, &vnode->flags)) {
 			_debug("vnode changed");
 			i_size_write(&vnode->vfs_inode, size);
-			vnode->vfs_inode.i_uid = status->owner;
-			vnode->vfs_inode.i_gid = status->group;
+			i_uid_write(&vnode->vfs_inode, status->owner);
+			i_gid_write(&vnode->vfs_inode, status->group);
 			vnode->vfs_inode.i_generation = vnode->fid.unique;
 			set_nlink(&vnode->vfs_inode, status->nlink);
 
@@ -181,12 +181,12 @@ static void xdr_encode_AFS_StoreStatus(__be32 **_bp, struct iattr *attr)
 
 	if (attr->ia_valid & ATTR_UID) {
 		mask |= AFS_SET_OWNER;
-		owner = attr->ia_uid;
+		owner = from_kuid(&init_user_ns, attr->ia_uid);
 	}
 
 	if (attr->ia_valid & ATTR_GID) {
 		mask |= AFS_SET_GROUP;
-		group = attr->ia_gid;
+		group = from_kgid(&init_user_ns, attr->ia_gid);
 	}
 
 	if (attr->ia_valid & ATTR_MODE) {
