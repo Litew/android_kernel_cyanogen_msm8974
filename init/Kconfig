@@ -868,10 +868,6 @@ config UIDGID_CONVERTED
 	depends on IMA = n
 	depends on EVM = n
 
-	# Filesystems
-
-	depends on !UML || HOSTFS = n
-
 	# The rare drivers that won't build
 	depends on INFINIBAND_QIB = n
 	depends on ANDROID_BINDER_IPC = n
