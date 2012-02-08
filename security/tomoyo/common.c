@@ -930,7 +930,9 @@ static bool tomoyo_manager(void)
 
 	if (!tomoyo_policy_loaded)
 		return true;
-	if (!tomoyo_manage_by_non_root && (task->cred->uid || task->cred->euid))
+	if (!tomoyo_manage_by_non_root &&
+	    (!uid_eq(task->cred->uid,  GLOBAL_ROOT_UID) ||
+	     !uid_eq(task->cred->euid, GLOBAL_ROOT_UID)))
 		return false;
 	list_for_each_entry_rcu(ptr, &tomoyo_kernel_namespace.
 				policy_list[TOMOYO_ID_MANAGER], head.list) {
