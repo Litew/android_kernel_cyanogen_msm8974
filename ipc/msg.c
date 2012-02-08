@@ -443,9 +443,12 @@ static int msgctl_down(struct ipc_namespace *ns, int msqid, int cmd,
 			goto out_unlock;
 		}
 
+		err = ipc_update_perm(&msqid64.msg_perm, ipcp);
+		if (err)
+			goto out_unlock;
+
 		msq->q_qbytes = msqid64.msg_qbytes;
 
-		ipc_update_perm(&msqid64.msg_perm, ipcp);
 		msq->q_ctime = get_seconds();
 		/* sleeping receivers might be excluded by
 		 * stricter permissions.
@@ -933,10 +936,10 @@ static int sysvipc_msg_proc_show(struct seq_file *s, void *it)
 			msq->q_qnum,
 			msq->q_lspid,
 			msq->q_lrpid,
-			msq->q_perm.uid,
-			msq->q_perm.gid,
-			msq->q_perm.cuid,
-			msq->q_perm.cgid,
+			from_kuid_munged(current_user_ns(), msq->q_perm.uid),
+			from_kgid_munged(current_user_ns(), msq->q_perm.gid),
+			from_kuid_munged(current_user_ns(), msq->q_perm.cuid),
+			from_kgid_munged(current_user_ns(), msq->q_perm.cgid),
 			msq->q_stime,
 			msq->q_rtime,
 			msq->q_ctime);
