@@ -54,34 +54,34 @@ static int usbfs_mount_count;	/* = 0 */
 static struct dentry *devices_usbfs_dentry;
 static int num_buses;	/* = 0 */
 
-static uid_t devuid;	/* = 0 */
-static uid_t busuid;	/* = 0 */
-static uid_t listuid;	/* = 0 */
-static gid_t devgid;	/* = 0 */
-static gid_t busgid;	/* = 0 */
-static gid_t listgid;	/* = 0 */
+static kuid_t devuid = GLOBAL_ROOT_UID;
+static kuid_t busuid = GLOBAL_ROOT_UID;
+static kuid_t listuid = GLOBAL_ROOT_UID;
+static kgid_t devgid = GLOBAL_ROOT_GID;
+static kgid_t busgid = GLOBAL_ROOT_GID;
+static kgid_t listgid = GLOBAL_ROOT_GID;
 static umode_t devmode = USBFS_DEFAULT_DEVMODE;
 static umode_t busmode = USBFS_DEFAULT_BUSMODE;
 static umode_t listmode = USBFS_DEFAULT_LISTMODE;
 
 static int usbfs_show_options(struct seq_file *seq, struct dentry *root)
 {
-	if (devuid != 0)
-		seq_printf(seq, ",devuid=%u", devuid);
-	if (devgid != 0)
-		seq_printf(seq, ",devgid=%u", devgid);
+	if (!uid_eq(devuid, GLOBAL_ROOT_UID))
+		seq_printf(seq, ",devuid=%u", from_kuid_munged(&init_user_ns, devuid));
+	if (!gid_eq(devgid, GLOBAL_ROOT_GID))
+		seq_printf(seq, ",devgid=%u", from_kgid_munged(&init_user_ns, devgid));
 	if (devmode != USBFS_DEFAULT_DEVMODE)
 		seq_printf(seq, ",devmode=%o", devmode);
-	if (busuid != 0)
-		seq_printf(seq, ",busuid=%u", busuid);
-	if (busgid != 0)
-		seq_printf(seq, ",busgid=%u", busgid);
+	if (!uid_eq(busuid, GLOBAL_ROOT_UID))
+		seq_printf(seq, ",busuid=%u", from_kuid_munged(&init_user_ns, busuid));
+	if (!gid_eq(busgid, GLOBAL_ROOT_GID))
+		seq_printf(seq, ",busgid=%u", from_kgid_munged(&init_user_ns, busgid));
 	if (busmode != USBFS_DEFAULT_BUSMODE)
 		seq_printf(seq, ",busmode=%o", busmode);
-	if (listuid != 0)
-		seq_printf(seq, ",listuid=%u", listuid);
-	if (listgid != 0)
-		seq_printf(seq, ",listgid=%u", listgid);
+	if (!uid_eq(listuid, GLOBAL_ROOT_UID))
+		seq_printf(seq, ",listuid=%u", from_kuid_munged(&init_user_ns, listuid));
+	if (!gid_eq(listgid, GLOBAL_ROOT_GID))
+		seq_printf(seq, ",listgid=%u", from_kgid_munged(&init_user_ns, listgid));
 	if (listmode != USBFS_DEFAULT_LISTMODE)
 		seq_printf(seq, ",listmode=%o", listmode);
 
@@ -112,14 +112,16 @@ static int parse_options(struct super_block *s, char *data)
 {
 	char *p;
 	int option;
+	kuid_t uid;
+	kgid_t gid;
 
 	/* (re)set to defaults. */
-	devuid = 0;
-	busuid = 0;
-	listuid = 0;
-	devgid = 0;
-	busgid = 0;
-	listgid = 0;
+	devuid = GLOBAL_ROOT_UID;
+	busuid = GLOBAL_ROOT_UID;
+	listuid = GLOBAL_ROOT_UID;
+	devgid = GLOBAL_ROOT_GID;
+	busgid = GLOBAL_ROOT_GID;
+	listgid = GLOBAL_ROOT_GID;
 	devmode = USBFS_DEFAULT_DEVMODE;
 	busmode = USBFS_DEFAULT_BUSMODE;
 	listmode = USBFS_DEFAULT_LISTMODE;
@@ -135,12 +137,18 @@ static int parse_options(struct super_block *s, char *data)
 		case Opt_devuid:
 			if (match_int(&args[0], &option))
 			       return -EINVAL;
-			devuid = option;
+			uid = make_kuid(current_user_ns(), option);
+			if (!uid_valid(uid))
+				return -EINVAL;
+			devuid = uid;
 			break;
 		case Opt_devgid:
 			if (match_int(&args[0], &option))
 			       return -EINVAL;
-			devgid = option;
+			gid = make_kgid(current_user_ns(), option);
+			if (!gid_valid(gid))
+				return -EINVAL;
+			devgid = gid;
 			break;
 		case Opt_devmode:
 			if (match_octal(&args[0], &option))
@@ -150,12 +158,18 @@ static int parse_options(struct super_block *s, char *data)
 		case Opt_busuid:
 			if (match_int(&args[0], &option))
 			       return -EINVAL;
-			busuid = option;
+			uid = make_kuid(current_user_ns(), option);
+			if (!uid_valid(uid))
+				return -EINVAL;
+			busuid = uid;
 			break;
 		case Opt_busgid:
 			if (match_int(&args[0], &option))
 			       return -EINVAL;
-			busgid = option;
+			gid = make_kgid(current_user_ns(), option);
+			if (!gid_valid(gid))
+				return -EINVAL;
+			busgid = gid;
 			break;
 		case Opt_busmode:
 			if (match_octal(&args[0], &option))
@@ -165,12 +179,18 @@ static int parse_options(struct super_block *s, char *data)
 		case Opt_listuid:
 			if (match_int(&args[0], &option))
 			       return -EINVAL;
-			listuid = option;
+			uid = make_kuid(current_user_ns(), option);
+			if (!uid_valid(uid))
+				return -EINVAL;
+			listuid = uid;
 			break;
 		case Opt_listgid:
 			if (match_int(&args[0], &option))
 			       return -EINVAL;
-			listgid = option;
+			gid = make_kgid(current_user_ns(), option);
+			if (!gid_valid(gid))
+				return -EINVAL;
+			listgid = gid;
 			break;
 		case Opt_listmode:
 			if (match_octal(&args[0], &option))
@@ -507,7 +527,7 @@ static int fs_create_by_name (const char *name, umode_t mode,
 static struct dentry *fs_create_file (const char *name, umode_t mode,
 				      struct dentry *parent, void *data,
 				      const struct file_operations *fops,
-				      uid_t uid, gid_t gid)
+				      kuid_t uid, kgid_t gid)
 {
 	struct dentry *dentry;
 	int error;
