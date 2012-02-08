@@ -159,11 +159,11 @@ struct smb_vol {
 	char *iocharset;  /* local code page for mapping to and from Unicode */
 	char source_rfc1001_name[RFC1001_NAME_LEN_WITH_NULL]; /* clnt nb name */
 	char target_rfc1001_name[RFC1001_NAME_LEN_WITH_NULL]; /* srvr nb name */
-	uid_t cred_uid;
-	uid_t linux_uid;
-	gid_t linux_gid;
-	uid_t backupuid;
-	gid_t backupgid;
+	kuid_t cred_uid;
+	kuid_t linux_uid;
+	kgid_t linux_gid;
+	kuid_t backupuid;
+	kgid_t backupgid;
 	umode_t file_mode;
 	umode_t dir_mode;
 	unsigned secFlg;
@@ -401,8 +401,8 @@ struct cifs_ses {
 	char *serverNOS;	/* name of network operating system of server */
 	char *serverDomain;	/* security realm of server */
 	int Suid;		/* remote smb uid  */
-	uid_t linux_uid;        /* overriding owner of files on the mount */
-	uid_t cred_uid;		/* owner of credentials */
+	kuid_t linux_uid;       /* overriding owner of files on the mount */
+	kuid_t cred_uid;	/* owner of credentials */
 	int capabilities;
 	char serverName[SERVER_NAME_LEN_WITH_NULL * 2];	/* BB make bigger for
 				TCP names - will ipv6 and sctp addresses fit? */
@@ -505,7 +505,7 @@ struct cifs_tcon {
  */
 struct tcon_link {
 	struct rb_node		tl_rbnode;
-	uid_t			tl_uid;
+	kuid_t			tl_uid;
 	unsigned long		tl_flags;
 #define TCON_LINK_MASTER	0
 #define TCON_LINK_PENDING	1
@@ -573,7 +573,7 @@ struct cifs_search_info {
 struct cifsFileInfo {
 	struct list_head tlist;	/* pointer to next fid owned by tcon */
 	struct list_head flist;	/* next fid (file instance) for this inode */
-	unsigned int uid;	/* allows finding which FileInfo structure */
+	kuid_t uid;		/* allows finding which FileInfo structure */
 	__u32 pid;		/* process id who opened file */
 	__u16 netfid;		/* file id from remote */
 	/* BB add lock scope info here if needed */ ;
@@ -841,8 +841,8 @@ struct cifs_fattr {
 	u64		cf_eof;
 	u64		cf_bytes;
 	u64		cf_createtime;
-	uid_t		cf_uid;
-	gid_t		cf_gid;
+	kuid_t		cf_uid;
+	kgid_t		cf_gid;
 	umode_t		cf_mode;
 	dev_t		cf_rdev;
 	unsigned int	cf_nlink;

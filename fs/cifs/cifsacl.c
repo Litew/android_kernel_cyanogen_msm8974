@@ -418,11 +418,11 @@ sid_to_id(struct cifs_sb_info *cifs_sb, struct cifs_sid *psid,
 	spinlock_t *cidlock;
 
 	if (sidtype == SIDOWNER) {
-		cid = cifs_sb->mnt_uid; /* default uid, in case upcall fails */
+		cid = from_kuid(&init_user_ns, cifs_sb->mnt_uid); /* default uid, in case upcall fails */
 		cidlock = &siduidlock;
 		cidtree = &uidtree;
 	} else if (sidtype == SIDGROUP) {
-		cid = cifs_sb->mnt_gid; /* default gid, in case upcall fails */
+		cid = from_kgid(&init_user_ns, cifs_sb->mnt_gid); /* default gid, in case upcall fails */
 		cidlock = &sidgidlock;
 		cidtree = &gidtree;
 	} else
@@ -511,9 +511,9 @@ sid_to_id(struct cifs_sb_info *cifs_sb, struct cifs_sid *psid,
 sid_to_id_out:
 	--psidid->refcount; /* decremented without spinlock */
 	if (sidtype == SIDOWNER)
-		fattr->cf_uid = cid;
+		fattr->cf_uid = make_kuid(&init_user_ns, cid);
 	else
-		fattr->cf_gid = cid;
+		fattr->cf_gid = make_kgid(&init_user_ns, cid);
 
 	return 0;
 }
@@ -537,7 +537,8 @@ init_cifs_idmap(void)
 	if (!cred)
 		return -ENOMEM;
 
-	keyring = key_alloc(&key_type_keyring, ".cifs_idmap", 0, 0, cred,
+	keyring = key_alloc(&key_type_keyring, ".cifs_idmap",
+			    GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, cred,
 			    (KEY_POS_ALL & ~KEY_POS_SETATTR) |
 			    KEY_USR_VIEW | KEY_USR_READ,
 			    KEY_ALLOC_NOT_IN_QUOTA);

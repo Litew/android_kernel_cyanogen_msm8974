@@ -279,11 +279,11 @@ cifs_create(struct inode *inode, struct dentry *direntry, umode_t mode,
 		};
 
 		if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_SET_UID) {
-			args.uid = (__u64) current_fsuid();
+			args.uid = (__u64) from_kuid(&init_user_ns, current_fsuid());
 			if (inode->i_mode & S_ISGID)
-				args.gid = (__u64) inode->i_gid;
+				args.gid = (__u64) i_gid_read(inode);
 			else
-				args.gid = (__u64) current_fsgid();
+				args.gid = (__u64) from_kgid(&init_user_ns, current_fsgid());
 		} else {
 			args.uid = NO_CHANGE_64;
 			args.gid = NO_CHANGE_64;
@@ -400,8 +400,8 @@ int cifs_mknod(struct inode *inode, struct dentry *direntry, umode_t mode,
 			.device	= device_number,
 		};
 		if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_SET_UID) {
-			args.uid = (__u64) current_fsuid();
-			args.gid = (__u64) current_fsgid();
+			args.uid = (__u64) from_kuid(&init_user_ns, current_fsuid());
+			args.gid = (__u64) from_kgid(&init_user_ns, current_fsgid());
 		} else {
 			args.uid = NO_CHANGE_64;
 			args.gid = NO_CHANGE_64;

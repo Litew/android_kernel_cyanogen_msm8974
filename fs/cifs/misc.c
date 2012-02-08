@@ -362,13 +362,13 @@ header_assemble(struct smb_hdr *buffer, char smb_command /* command */ ,
 		/*  BB Add support for establishing new tCon and SMB Session  */
 		/*      with userid/password pairs found on the smb session   */
 		/*	for other target tcp/ip addresses 		BB    */
-				if (current_fsuid() != treeCon->ses->linux_uid) {
+				if (!uid_eq(current_fsuid(), treeCon->ses->linux_uid)) {
 					cFYI(1, "Multiuser mode and UID "
 						 "did not match tcon uid");
 					spin_lock(&cifs_tcp_ses_lock);
 					list_for_each(temp_item, &treeCon->ses->server->smb_ses_list) {
 						ses = list_entry(temp_item, struct cifs_ses, smb_ses_list);
-						if (ses->linux_uid == current_fsuid()) {
+						if (uid_eq(ses->linux_uid, current_fsuid())) {
 							if (ses->server == treeCon->ses->server) {
 								cFYI(1, "found matching uid substitute right smb_uid");
 								buffer->Uid = ses->Suid;
@@ -690,7 +690,7 @@ bool
 backup_cred(struct cifs_sb_info *cifs_sb)
 {
 	if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_CIFS_BACKUPUID) {
-		if (cifs_sb->mnt_backupuid == current_fsuid())
+		if (uid_eq(cifs_sb->mnt_backupuid, current_fsuid()))
 			return true;
 	}
 	if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_CIFS_BACKUPGID) {

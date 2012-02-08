@@ -251,12 +251,12 @@ cifs_unix_basic_to_fattr(struct cifs_fattr *fattr, FILE_UNIX_BASIC_INFO *info,
 	if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_OVERR_UID)
 		fattr->cf_uid = cifs_sb->mnt_uid;
 	else
-		fattr->cf_uid = le64_to_cpu(info->Uid);
+		fattr->cf_uid = make_kuid(&init_user_ns, le64_to_cpu(info->Uid));
 
 	if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_OVERR_GID)
 		fattr->cf_gid = cifs_sb->mnt_gid;
 	else
-		fattr->cf_gid = le64_to_cpu(info->Gid);
+		fattr->cf_gid = make_kgid(&init_user_ns, le64_to_cpu(info->Gid));
 
 	fattr->cf_nlink = le64_to_cpu(info->Nlinks);
 }
@@ -1386,11 +1386,11 @@ mkdir_get_info:
 				.device	= 0,
 			};
 			if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_SET_UID) {
-				args.uid = (__u64)current_fsuid();
+				args.uid = (__u64)from_kuid(&init_user_ns, current_fsuid());
 				if (inode->i_mode & S_ISGID)
-					args.gid = (__u64)inode->i_gid;
+					args.gid = (__u64)i_gid_read(inode);
 				else
-					args.gid = (__u64)current_fsgid();
+					args.gid = (__u64)from_kgid(&init_user_ns, current_fsgid());
 			} else {
 				args.uid = NO_CHANGE_64;
 				args.gid = NO_CHANGE_64;
@@ -2036,12 +2036,12 @@ cifs_setattr_unix(struct dentry *direntry, struct iattr *attrs)
 		args->mode = NO_CHANGE_64;
 
 	if (attrs->ia_valid & ATTR_UID)
-		args->uid = attrs->ia_uid;
+		args->uid = from_kuid(&init_user_ns, attrs->ia_uid);
 	else
 		args->uid = NO_CHANGE_64;
 
 	if (attrs->ia_valid & ATTR_GID)
-		args->gid = attrs->ia_gid;
+		args->gid = from_kgid(&init_user_ns, attrs->ia_gid);
 	else
 		args->gid = NO_CHANGE_64;
 
@@ -2164,10 +2164,10 @@ cifs_setattr_nounix(struct dentry *direntry, struct iattr *attrs)
 	}
 
 	if (attrs->ia_valid & ATTR_UID)
-		uid = attrs->ia_uid;
+		uid = from_kuid(&init_user_ns, attrs->ia_uid);
 
 	if (attrs->ia_valid & ATTR_GID)
-		gid = attrs->ia_gid;
+		gid = from_kgid(&init_user_ns, attrs->ia_gid);
 
 #ifdef CONFIG_CIFS_ACL
 	if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_CIFS_ACL) {

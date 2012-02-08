@@ -370,13 +370,13 @@ cifs_show_options(struct seq_file *s, struct dentry *root)
 				   (int)(srcaddr->sa_family));
 	}
 
-	seq_printf(s, ",uid=%d", cifs_sb->mnt_uid);
+	seq_printf(s, ",uid=%d", from_kuid_munged(&init_user_ns, cifs_sb->mnt_uid));
 	if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_OVERR_UID)
 		seq_printf(s, ",forceuid");
 	else
 		seq_printf(s, ",noforceuid");
 
-	seq_printf(s, ",gid=%d", cifs_sb->mnt_gid);
+	seq_printf(s, ",gid=%d", from_kgid_munged(&init_user_ns, cifs_sb->mnt_gid));
 	if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_OVERR_GID)
 		seq_printf(s, ",forcegid");
 	else
