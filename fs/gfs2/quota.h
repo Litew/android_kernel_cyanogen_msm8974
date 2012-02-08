@@ -46,7 +46,7 @@ static inline int gfs2_quota_lock_check(struct gfs2_inode *ip)
 		return ret;
 	if (sdp->sd_args.ar_quota != GFS2_QUOTA_ON)
 		return 0;
-	ret = gfs2_quota_check(ip, ip->i_inode.i_uid, ip->i_inode.i_gid);
+	ret = gfs2_quota_check(ip, i_uid_read(&ip->i_inode), i_gid_read(&ip->i_inode));
 	if (ret)
 		gfs2_quota_unlock(ip);
 	return ret;

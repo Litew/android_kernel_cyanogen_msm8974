@@ -368,21 +368,21 @@ static void munge_mode_uid_gid(struct gfs2_inode *dip, umode_t *mode,
 			       unsigned int *uid, unsigned int *gid)
 {
 	if (GFS2_SB(&dip->i_inode)->sd_args.ar_suiddir &&
-	    (dip->i_inode.i_mode & S_ISUID) && dip->i_inode.i_uid) {
+	    (dip->i_inode.i_mode & S_ISUID) && i_uid_read(&dip->i_inode)) {
 		if (S_ISDIR(*mode))
 			*mode |= S_ISUID;
-		else if (dip->i_inode.i_uid != current_fsuid())
+		else if (!uid_eq(dip->i_inode.i_uid, current_fsuid()))
 			*mode &= ~07111;
-		*uid = dip->i_inode.i_uid;
+		*uid = i_uid_read(&dip->i_inode);
 	} else
-		*uid = current_fsuid();
+		*uid = from_kuid(&init_user_ns, current_fsuid());
 
 	if (dip->i_inode.i_mode & S_ISGID) {
 		if (S_ISDIR(*mode))
 			*mode |= S_ISGID;
-		*gid = dip->i_inode.i_gid;
+		*gid = i_gid_read(&dip->i_inode);
 	} else
-		*gid = current_fsgid();
+		*gid = from_kgid(&init_user_ns, current_fsgid());
 }
 
 static int alloc_dinode(struct gfs2_inode *dip, u64 *no_addr, u64 *generation)
@@ -568,7 +568,7 @@ static int link_dinode(struct gfs2_inode *dip, const struct qstr *name,
 	if (alloc_required < 0)
 		goto fail_quota_locks;
 	if (alloc_required) {
-		error = gfs2_quota_check(dip, dip->i_inode.i_uid, dip->i_inode.i_gid);
+		error = gfs2_quota_check(dip, i_uid_read(&dip->i_inode), i_gid_read(&dip->i_inode));
 		if (error)
 			goto fail_quota_locks;
 
@@ -955,8 +955,8 @@ static int gfs2_unlink_ok(struct gfs2_inode *dip, const struct qstr *name,
 		return -EPERM;
 
 	if ((dip->i_inode.i_mode & S_ISVTX) &&
-	    dip->i_inode.i_uid != current_fsuid() &&
-	    ip->i_inode.i_uid != current_fsuid() && !capable(CAP_FOWNER))
+	    !uid_eq(dip->i_inode.i_uid, current_fsuid()) &&
+	    !uid_eq(ip->i_inode.i_uid, current_fsuid()) && !capable(CAP_FOWNER))
 		return -EPERM;
 
 	if (IS_APPEND(&dip->i_inode))
@@ -1580,10 +1580,10 @@ static int setattr_chown(struct inode *inode, struct iattr *attr)
 	u32 ouid, ogid, nuid, ngid;
 	int error;
 
-	ouid = inode->i_uid;
-	ogid = inode->i_gid;
-	nuid = attr->ia_uid;
-	ngid = attr->ia_gid;
+	ouid = i_uid_read(inode);
+	ogid = i_gid_read(inode);
+	nuid = from_kuid(&init_user_ns, attr->ia_uid);
+	ngid = from_kgid(&init_user_ns, attr->ia_gid);
 
 	if (!(attr->ia_valid & ATTR_UID) || ouid == nuid)
 		ouid = nuid = NO_QUOTA_CHANGE;

@@ -505,19 +505,19 @@ int gfs2_quota_hold(struct gfs2_inode *ip, u32 uid, u32 gid)
 	if (sdp->sd_args.ar_quota == GFS2_QUOTA_OFF)
 		return 0;
 
-	error = qdsb_get(sdp, QUOTA_USER, ip->i_inode.i_uid, qd);
+	error = qdsb_get(sdp, QUOTA_USER, i_uid_read(&ip->i_inode), qd);
 	if (error)
 		goto out;
 	qa->qa_qd_num++;
 	qd++;
 
-	error = qdsb_get(sdp, QUOTA_GROUP, ip->i_inode.i_gid, qd);
+	error = qdsb_get(sdp, QUOTA_GROUP, i_gid_read(&ip->i_inode), qd);
 	if (error)
 		goto out;
 	qa->qa_qd_num++;
 	qd++;
 
-	if (uid != NO_QUOTA_CHANGE && uid != ip->i_inode.i_uid) {
+	if (uid != NO_QUOTA_CHANGE && uid != i_uid_read(&ip->i_inode)) {
 		error = qdsb_get(sdp, QUOTA_USER, uid, qd);
 		if (error)
 			goto out;
@@ -525,7 +525,7 @@ int gfs2_quota_hold(struct gfs2_inode *ip, u32 uid, u32 gid)
 		qd++;
 	}
 
-	if (gid != NO_QUOTA_CHANGE && gid != ip->i_inode.i_gid) {
+	if (gid != NO_QUOTA_CHANGE && gid != i_gid_read(&ip->i_inode)) {
 		error = qdsb_get(sdp, QUOTA_GROUP, gid, qd);
 		if (error)
 			goto out;

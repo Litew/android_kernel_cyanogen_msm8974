@@ -827,8 +827,8 @@ static int do_strip(struct gfs2_inode *ip, struct buffer_head *dibh,
 	}
 
 	gfs2_statfs_change(sdp, 0, +btotal, 0);
-	gfs2_quota_change(ip, -(s64)btotal, ip->i_inode.i_uid,
-			  ip->i_inode.i_gid);
+	gfs2_quota_change(ip, -(s64)btotal, i_uid_read(&ip->i_inode),
+			  i_gid_read(&ip->i_inode));
 
 	ip->i_inode.i_mtime = ip->i_inode.i_ctime = CURRENT_TIME;
 
