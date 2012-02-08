@@ -224,11 +224,11 @@ posix_acl_permission(struct inode *inode, const struct posix_acl *acl, int want)
                 switch(pa->e_tag) {
                         case ACL_USER_OBJ:
 				/* (May have been checked already) */
-				if (inode->i_uid == current_fsuid())
+				if (uid_eq(inode->i_uid, current_fsuid()))
                                         goto check_perm;
                                 break;
                         case ACL_USER:
-				if (pa->e_id == current_fsuid())
+				if (uid_eq(make_kuid(&init_user_ns, pa->e_id), current_fsuid()))
                                         goto mask;
 				break;
                         case ACL_GROUP_OBJ:
@@ -239,7 +239,7 @@ posix_acl_permission(struct inode *inode, const struct posix_acl *acl, int want)
                                 }
 				break;
                         case ACL_GROUP:
-                                if (in_group_p(pa->e_id)) {
+                                if (in_group_p(make_kgid(&init_user_ns, pa->e_id))) {
 					found = 1;
 					if ((pa->e_perm & want) == want)
 						goto mask;
