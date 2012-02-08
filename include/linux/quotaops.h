@@ -51,6 +51,14 @@ int dquot_scan_active(struct super_block *sb,
 		      unsigned long priv);
 struct dquot *dquot_alloc(struct super_block *sb, int type);
 void dquot_destroy(struct dquot *dquot);
+static inline struct dquot *dqgetusr(struct super_block *sb, kuid_t uid)
+{
+	return dqget(sb, from_kuid(&init_user_ns, uid), USRQUOTA);
+}
+static inline struct dquot *dqgetgrp(struct super_block *sb, kgid_t gid)
+{
+	return dqget(sb, from_kgid(&init_user_ns, gid), GRPQUOTA);
+}
 
 int __dquot_alloc_space(struct inode *inode, qsize_t number, int flags);
 void __dquot_free_space(struct inode *inode, qsize_t number, int flags);

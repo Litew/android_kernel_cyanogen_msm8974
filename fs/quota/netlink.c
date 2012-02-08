@@ -71,7 +71,11 @@ void quota_send_warning(short type, unsigned int id, dev_t dev,
 	ret = nla_put_u32(skb, QUOTA_NL_A_DEV_MINOR, MINOR(dev));
 	if (ret)
 		goto attr_err_out;
-	ret = nla_put_u64(skb, QUOTA_NL_A_CAUSED_ID, current_uid());
+	/* Report the current user as seen by the filesystem that issues
+	 * quota warning.
+	 */
+	ret = nla_put_u64(skb, QUOTA_NL_A_CAUSED_ID,
+			  from_kuid_munged(&init_user_ns, current_uid()));
 	if (ret)
 		goto attr_err_out;
 	genlmsg_end(skb, msg_head);

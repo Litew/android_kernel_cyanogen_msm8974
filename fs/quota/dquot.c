@@ -1139,9 +1139,10 @@ static int need_print_warning(struct dquot_warn *warn)
 
 	switch (warn->w_dq_type) {
 		case USRQUOTA:
-			return current_fsuid() == warn->w_dq_id;
+			return uid_eq(current_fsuid(),
+				      make_kuid(&init_user_ns, warn->w_dq_id));
 		case GRPQUOTA:
-			return in_group_p(warn->w_dq_id);
+			return in_group_p(make_kgid(&init_user_ns, warn->w_dq_id));
 	}
 	return 0;
 }
@@ -1391,10 +1392,10 @@ static void __dquot_initialize(struct inode *inode, int type)
 			continue;
 		switch (cnt) {
 		case USRQUOTA:
-			id = inode->i_uid;
+			id = i_uid_read(inode);
 			break;
 		case GRPQUOTA:
-			id = inode->i_gid;
+			id = i_gid_read(inode);
 			break;
 		}
 		got[cnt] = dqget(sb, id, cnt);
@@ -1880,10 +1881,10 @@ int dquot_transfer(struct inode *inode, struct iattr *iattr)
 	if (!dquot_active(inode))
 		return 0;
 
-	if (iattr->ia_valid & ATTR_UID && iattr->ia_uid != inode->i_uid)
-		transfer_to[USRQUOTA] = dqget(sb, iattr->ia_uid, USRQUOTA);
-	if (iattr->ia_valid & ATTR_GID && iattr->ia_gid != inode->i_gid)
-		transfer_to[GRPQUOTA] = dqget(sb, iattr->ia_gid, GRPQUOTA);
+	if (iattr->ia_valid & ATTR_UID && !uid_eq(iattr->ia_uid, inode->i_uid))
+		transfer_to[USRQUOTA] = dqgetusr(sb, iattr->ia_uid);
+	if (iattr->ia_valid & ATTR_GID && !gid_eq(iattr->ia_gid, inode->i_gid))
+		transfer_to[GRPQUOTA] = dqgetgrp(sb, iattr->ia_gid);
 
 	ret = __dquot_transfer(inode, transfer_to);
 	dqput_all(transfer_to);

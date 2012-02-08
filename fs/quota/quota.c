@@ -32,8 +32,8 @@ static int check_quotactl_permission(struct super_block *sb, int type, int cmd,
 	/* allow to query information for dquots we "own" */
 	case Q_GETQUOTA:
 	case Q_XGETQUOTA:
-		if ((type == USRQUOTA && current_euid() == id) ||
-		    (type == GRPQUOTA && in_egroup_p(id)))
+		if ((type == USRQUOTA && uid_eq(current_euid(), make_kuid(&init_user_ns, id))) ||
+		    (type == GRPQUOTA && in_egroup_p(make_kgid(&init_user_ns, id))))
 			break;
 		/*FALLTHROUGH*/
 	default:

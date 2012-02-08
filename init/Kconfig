@@ -873,8 +873,6 @@ config UIDGID_CONVERTED
 	depends on TASKSTATS = n
 	depends on TRACING = n
 	depends on FS_POSIX_ACL = n
-	depends on QUOTA = n
-	depends on QUOTACTL = n
 	depends on BSD_PROCESS_ACCT = n
 	depends on DRM = n
 	depends on PROC_EVENTS = n
