@@ -95,7 +95,7 @@ static struct rb_node *key_serial_next(struct rb_node *n)
 	n = rb_next(n);
 	while (n) {
 		struct key *key = rb_entry(n, struct key, serial_node);
-		if (key->user->user_ns == user_ns)
+		if (kuid_has_mapping(user_ns, key->user->uid))
 			break;
 		n = rb_next(n);
 	}
@@ -132,7 +132,7 @@ static struct key *find_ge_key(key_serial_t id)
 		return NULL;
 
 	for (;;) {
-		if (minkey->user->user_ns == user_ns)
+		if (kuid_has_mapping(user_ns, minkey->user->uid))
 			return minkey;
 		n = rb_next(&minkey->serial_node);
 		if (!n)
@@ -254,8 +254,8 @@ static int proc_keys_show(struct seq_file *m, void *v)
 		   atomic_read(&key->usage),
 		   xbuf,
 		   key->perm,
-		   key->uid,
-		   key->gid,
+		   from_kuid_munged(current_user_ns(), key->uid),
+		   from_kgid_munged(current_user_ns(), key->gid),
 		   key->type->name);
 
 #undef showflag
@@ -274,7 +274,7 @@ static struct rb_node *__key_user_next(struct rb_node *n)
 {
 	while (n) {
 		struct key_user *user = rb_entry(n, struct key_user, node);
-		if (user->user_ns == current_user_ns())
+		if (kuid_has_mapping(current_user_ns(), user->uid))
 			break;
 		n = rb_next(n);
 	}
@@ -334,13 +334,13 @@ static int proc_key_users_show(struct seq_file *m, void *v)
 {
 	struct rb_node *_p = v;
 	struct key_user *user = rb_entry(_p, struct key_user, node);
-	unsigned maxkeys = (user->uid == 0) ?
+	unsigned maxkeys = uid_eq(user->uid, GLOBAL_ROOT_UID) ?
 		key_quota_root_maxkeys : key_quota_maxkeys;
-	unsigned maxbytes = (user->uid == 0) ?
+	unsigned maxbytes = uid_eq(user->uid, GLOBAL_ROOT_UID) ?
 		key_quota_root_maxbytes : key_quota_maxbytes;
 
 	seq_printf(m, "%5u: %5d %d/%d %d/%d %d/%d\n",
-		   user->uid,
+		   from_kuid_munged(current_user_ns(), user->uid),
 		   atomic_read(&user->usage),
 		   atomic_read(&user->nkeys),
 		   atomic_read(&user->nikeys),
