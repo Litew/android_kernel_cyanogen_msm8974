@@ -58,8 +58,8 @@ void bacct_add_tsk(struct taskstats *stats, struct task_struct *tsk)
 	stats->ac_pid	 = tsk->pid;
 	rcu_read_lock();
 	tcred = __task_cred(tsk);
-	stats->ac_uid	 = tcred->uid;
-	stats->ac_gid	 = tcred->gid;
+	stats->ac_uid	 = from_kuid_munged(&init_user_ns, tcred->uid);
+	stats->ac_gid	 = from_kgid_munged(&init_user_ns, tcred->gid);
 	stats->ac_ppid	 = pid_alive(tsk) ?
 				rcu_dereference(tsk->real_parent)->tgid : 0;
 	rcu_read_unlock();
