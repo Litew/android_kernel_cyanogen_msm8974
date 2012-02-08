@@ -867,7 +867,6 @@ config UIDGID_CONVERTED
 	# Features
 	depends on IMA = n
 	depends on EVM = n
-	depends on DRM = n
 
 	# Networking
 	depends on NET_9P = n
