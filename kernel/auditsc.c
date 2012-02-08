@@ -510,19 +510,19 @@ static int audit_field_compare(struct task_struct *tsk,
 	switch (f->val) {
 	/* process to file object comparisons */
 	case AUDIT_COMPARE_UID_TO_OBJ_UID:
-		return audit_compare_id(cred->uid,
+		return audit_compare_id(from_kuid(&init_user_ns, cred->uid),
 					name, offsetof(struct audit_names, uid),
 					f, ctx);
 	case AUDIT_COMPARE_GID_TO_OBJ_GID:
-		return audit_compare_id(cred->gid,
+		return audit_compare_id(from_kgid(&init_user_ns, cred->gid),
 					name, offsetof(struct audit_names, gid),
 					f, ctx);
 	case AUDIT_COMPARE_EUID_TO_OBJ_UID:
-		return audit_compare_id(cred->euid,
+		return audit_compare_id(from_kuid(&init_user_ns, cred->euid),
 					name, offsetof(struct audit_names, uid),
 					f, ctx);
 	case AUDIT_COMPARE_EGID_TO_OBJ_GID:
-		return audit_compare_id(cred->egid,
+		return audit_compare_id(from_kgid(&init_user_ns, cred->egid),
 					name, offsetof(struct audit_names, gid),
 					f, ctx);
 	case AUDIT_COMPARE_AUID_TO_OBJ_UID:
@@ -530,60 +530,88 @@ static int audit_field_compare(struct task_struct *tsk,
 					name, offsetof(struct audit_names, uid),
 					f, ctx);
 	case AUDIT_COMPARE_SUID_TO_OBJ_UID:
-		return audit_compare_id(cred->suid,
+		return audit_compare_id(from_kuid(&init_user_ns, cred->suid),
 					name, offsetof(struct audit_names, uid),
 					f, ctx);
 	case AUDIT_COMPARE_SGID_TO_OBJ_GID:
-		return audit_compare_id(cred->sgid,
+		return audit_compare_id(from_kgid(&init_user_ns, cred->sgid),
 					name, offsetof(struct audit_names, gid),
 					f, ctx);
 	case AUDIT_COMPARE_FSUID_TO_OBJ_UID:
-		return audit_compare_id(cred->fsuid,
+		return audit_compare_id(from_kuid(&init_user_ns, cred->fsuid),
 					name, offsetof(struct audit_names, uid),
 					f, ctx);
 	case AUDIT_COMPARE_FSGID_TO_OBJ_GID:
-		return audit_compare_id(cred->fsgid,
+		return audit_compare_id(from_kgid(&init_user_ns, cred->fsgid),
 					name, offsetof(struct audit_names, gid),
 					f, ctx);
 	/* uid comparisons */
 	case AUDIT_COMPARE_UID_TO_AUID:
-		return audit_comparator(cred->uid, f->op, tsk->loginuid);
+		return audit_comparator(from_kuid(&init_user_ns, cred->uid),
+					f->op, tsk->loginuid);
 	case AUDIT_COMPARE_UID_TO_EUID:
-		return audit_comparator(cred->uid, f->op, cred->euid);
+		return audit_comparator(from_kuid(&init_user_ns, cred->uid),
+					f->op,
+					from_kuid(&init_user_ns, cred->euid));
 	case AUDIT_COMPARE_UID_TO_SUID:
-		return audit_comparator(cred->uid, f->op, cred->suid);
+		return audit_comparator(from_kuid(&init_user_ns, cred->uid),
+					f->op,
+					from_kuid(&init_user_ns, cred->suid));
 	case AUDIT_COMPARE_UID_TO_FSUID:
-		return audit_comparator(cred->uid, f->op, cred->fsuid);
+		return audit_comparator(from_kuid(&init_user_ns, cred->uid),
+					f->op,
+					from_kuid(&init_user_ns, cred->fsuid));
 	/* auid comparisons */
 	case AUDIT_COMPARE_AUID_TO_EUID:
-		return audit_comparator(tsk->loginuid, f->op, cred->euid);
+		return audit_comparator(tsk->loginuid, f->op,
+					from_kuid(&init_user_ns, cred->euid));
 	case AUDIT_COMPARE_AUID_TO_SUID:
-		return audit_comparator(tsk->loginuid, f->op, cred->suid);
+		return audit_comparator(tsk->loginuid, f->op,
+					from_kuid(&init_user_ns, cred->suid));
 	case AUDIT_COMPARE_AUID_TO_FSUID:
-		return audit_comparator(tsk->loginuid, f->op, cred->fsuid);
+		return audit_comparator(tsk->loginuid, f->op,
+					from_kuid(&init_user_ns, cred->fsuid));
 	/* euid comparisons */
 	case AUDIT_COMPARE_EUID_TO_SUID:
-		return audit_comparator(cred->euid, f->op, cred->suid);
+		return audit_comparator(from_kuid(&init_user_ns, cred->euid),
+					f->op,
+					from_kuid(&init_user_ns, cred->suid));
 	case AUDIT_COMPARE_EUID_TO_FSUID:
-		return audit_comparator(cred->euid, f->op, cred->fsuid);
+		return audit_comparator(from_kuid(&init_user_ns, cred->euid),
+					f->op,
+					from_kuid(&init_user_ns, cred->fsuid));
 	/* suid comparisons */
 	case AUDIT_COMPARE_SUID_TO_FSUID:
-		return audit_comparator(cred->suid, f->op, cred->fsuid);
+		return audit_comparator(from_kuid(&init_user_ns, cred->suid),
+					f->op,
+					from_kuid(&init_user_ns, cred->fsuid));
 	/* gid comparisons */
 	case AUDIT_COMPARE_GID_TO_EGID:
-		return audit_comparator(cred->gid, f->op, cred->egid);
+		return audit_comparator(from_kgid(&init_user_ns, cred->gid),
+					f->op,
+					from_kgid(&init_user_ns, cred->egid));
 	case AUDIT_COMPARE_GID_TO_SGID:
-		return audit_comparator(cred->gid, f->op, cred->sgid);
+		return audit_comparator(from_kgid(&init_user_ns, cred->gid),
+					f->op,
+					from_kgid(&init_user_ns, cred->sgid));
 	case AUDIT_COMPARE_GID_TO_FSGID:
-		return audit_comparator(cred->gid, f->op, cred->fsgid);
+		return audit_comparator(from_kgid(&init_user_ns, cred->gid),
+					f->op,
+					from_kgid(&init_user_ns, cred->fsgid));
 	/* egid comparisons */
 	case AUDIT_COMPARE_EGID_TO_SGID:
-		return audit_comparator(cred->egid, f->op, cred->sgid);
+		return audit_comparator(from_kgid(&init_user_ns, cred->egid),
+					f->op,
+					from_kgid(&init_user_ns, cred->sgid));
 	case AUDIT_COMPARE_EGID_TO_FSGID:
-		return audit_comparator(cred->egid, f->op, cred->fsgid);
+		return audit_comparator(from_kgid(&init_user_ns, cred->egid),
+					f->op,
+					from_kgid(&init_user_ns, cred->fsgid));
 	/* sgid comparison */
 	case AUDIT_COMPARE_SGID_TO_FSGID:
-		return audit_comparator(cred->sgid, f->op, cred->fsgid);
+		return audit_comparator(from_kgid(&init_user_ns, cred->sgid),
+					f->op,
+					from_kgid(&init_user_ns,  cred->fsgid));
 	default:
 		WARN(1, "Missing AUDIT_COMPARE define.  Report as a bug\n");
 		return 0;
@@ -609,6 +637,8 @@ static int audit_filter_rules(struct task_struct *tsk,
 	const struct cred *cred;
 	int i, need_sid = 1;
 	u32 sid;
+	uid_t uid;
+	gid_t gid;
 
 	cred = rcu_dereference_check(tsk->cred, tsk == current || task_creation);
 
@@ -629,28 +659,36 @@ static int audit_filter_rules(struct task_struct *tsk,
 			}
 			break;
 		case AUDIT_UID:
-			result = audit_comparator(cred->uid, f->op, f->val);
+			uid = from_kuid(&init_user_ns, cred->uid);
+			result = audit_comparator(uid, f->op, f->val);
 			break;
 		case AUDIT_EUID:
-			result = audit_comparator(cred->euid, f->op, f->val);
+			uid = from_kuid(&init_user_ns, cred->euid);
+			result = audit_comparator(uid, f->op, f->val);
 			break;
 		case AUDIT_SUID:
-			result = audit_comparator(cred->suid, f->op, f->val);
+			uid = from_kuid(&init_user_ns, cred->suid);
+			result = audit_comparator(uid, f->op, f->val);
 			break;
 		case AUDIT_FSUID:
-			result = audit_comparator(cred->fsuid, f->op, f->val);
+			uid = from_kuid(&init_user_ns, cred->fsuid);
+			result = audit_comparator(uid, f->op, f->val);
 			break;
 		case AUDIT_GID:
-			result = audit_comparator(cred->gid, f->op, f->val);
+			gid = from_kgid(&init_user_ns, cred->gid);
+			result = audit_comparator(gid, f->op, f->val);
 			break;
 		case AUDIT_EGID:
-			result = audit_comparator(cred->egid, f->op, f->val);
+			gid = from_kgid(&init_user_ns, cred->egid);
+			result = audit_comparator(gid, f->op, f->val);
 			break;
 		case AUDIT_SGID:
-			result = audit_comparator(cred->sgid, f->op, f->val);
+			gid = from_kgid(&init_user_ns, cred->sgid);
+			result = audit_comparator(gid, f->op, f->val);
 			break;
 		case AUDIT_FSGID:
-			result = audit_comparator(cred->fsgid, f->op, f->val);
+			gid = from_kgid(&init_user_ns, cred->fsgid);
+			result = audit_comparator(gid, f->op, f->val);
 			break;
 		case AUDIT_PERS:
 			result = audit_comparator(tsk->personality, f->op, f->val);
@@ -1596,14 +1634,14 @@ static void audit_log_exit(struct audit_context *context, struct task_struct *ts
 	if (!context->ppid)
 		context->ppid = sys_getppid();
 	cred = current_cred();
-	context->uid   = cred->uid;
-	context->gid   = cred->gid;
-	context->euid  = cred->euid;
-	context->suid  = cred->suid;
-	context->fsuid = cred->fsuid;
-	context->egid  = cred->egid;
-	context->sgid  = cred->sgid;
-	context->fsgid = cred->fsgid;
+	context->uid   = from_kuid(&init_user_ns, cred->uid);
+	context->gid   = from_kgid(&init_user_ns, cred->gid);
+	context->euid  = from_kuid(&init_user_ns, cred->euid);
+	context->suid  = from_kuid(&init_user_ns, cred->suid);
+	context->fsuid = from_kuid(&init_user_ns, cred->fsuid);
+	context->egid  = from_kgid(&init_user_ns, cred->egid);
+	context->sgid  = from_kgid(&init_user_ns, cred->sgid);
+	context->fsgid = from_kgid(&init_user_ns, cred->fsgid);
 	context->personality = tsk->personality;
 
 	ab = audit_log_start(context, GFP_KERNEL, AUDIT_SYSCALL);
@@ -2137,8 +2175,8 @@ static void audit_copy_inode(struct audit_names *name, const struct dentry *dent
 	name->ino   = inode->i_ino;
 	name->dev   = inode->i_sb->s_dev;
 	name->mode  = inode->i_mode;
-	name->uid   = inode->i_uid;
-	name->gid   = inode->i_gid;
+	name->uid   = from_kuid(&init_user_ns, inode->i_uid);
+	name->gid   = from_kgid(&init_user_ns, inode->i_gid);
 	name->rdev  = inode->i_rdev;
 	security_inode_getsecid(inode, &name->osid);
 	audit_copy_fcaps(name, dentry);
@@ -2321,7 +2359,8 @@ int audit_set_loginuid(uid_t loginuid)
 			audit_log_format(ab, "login pid=%d uid=%u "
 				"old auid=%u new auid=%u"
 				" old ses=%u new ses=%u",
-				task->pid, task_uid(task),
+				task->pid,
+				from_kuid(&init_user_ns, task_uid(task)),
 				task->loginuid, loginuid,
 				task->sessionid, sessionid);
 			audit_log_end(ab);
@@ -2422,8 +2461,8 @@ void __audit_mq_getsetattr(mqd_t mqdes, struct mq_attr *mqstat)
 void __audit_ipc_obj(struct kern_ipc_perm *ipcp)
 {
 	struct audit_context *context = current->audit_context;
-	context->ipc.uid = ipcp->uid;
-	context->ipc.gid = ipcp->gid;
+	context->ipc.uid = from_kuid(&init_user_ns, ipcp->uid);
+	context->ipc.gid = from_kgid(&init_user_ns, ipcp->gid);
 	context->ipc.mode = ipcp->mode;
 	context->ipc.has_perm = 0;
 	security_ipc_getsecid(ipcp, &context->ipc.osid);
@@ -2526,7 +2565,7 @@ void __audit_ptrace(struct task_struct *t)
 
 	context->target_pid = t->pid;
 	context->target_auid = audit_get_loginuid(t);
-	context->target_uid = task_uid(t);
+	context->target_uid = from_kuid(&init_user_ns, task_uid(t));
 	context->target_sessionid = audit_get_sessionid(t);
 	security_task_getsecid(t, &context->target_sid);
 	memcpy(context->target_comm, t->comm, TASK_COMM_LEN);
@@ -2545,7 +2584,8 @@ int __audit_signal_info(int sig, struct task_struct *t)
 	struct audit_aux_data_pids *axp;
 	struct task_struct *tsk = current;
 	struct audit_context *ctx = tsk->audit_context;
-	uid_t uid = current_uid(), t_uid = task_uid(t);
+	uid_t uid = from_kuid(&init_user_ns, current_uid());
+	uid_t t_uid = from_kuid(&init_user_ns, task_uid(t));
 
 	if (audit_pid && t->tgid == audit_pid) {
 		if (sig == SIGTERM || sig == SIGHUP || sig == SIGUSR1 || sig == SIGUSR2) {
@@ -2677,7 +2717,8 @@ static void audit_log_abend(struct audit_buffer *ab, char *reason, long signr)
 
 	auid = audit_get_loginuid(current);
 	sessionid = audit_get_sessionid(current);
-	current_uid_gid(&uid, &gid);
+	uid = from_kuid(&init_user_ns, current_uid());
+	gid = from_kgid(&init_user_ns, current_gid());
 
 	audit_log_format(ab, "auid=%u uid=%u gid=%u ses=%u",
 			 auid, uid, gid, sessionid);
