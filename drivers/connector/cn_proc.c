@@ -127,11 +127,11 @@ void proc_id_connector(struct task_struct *task, int which_id)
 	rcu_read_lock();
 	cred = __task_cred(task);
 	if (which_id == PROC_EVENT_UID) {
-		ev->event_data.id.r.ruid = cred->uid;
-		ev->event_data.id.e.euid = cred->euid;
+		ev->event_data.id.r.ruid = from_kuid_munged(&init_user_ns, cred->uid);
+		ev->event_data.id.e.euid = from_kuid_munged(&init_user_ns, cred->euid);
 	} else if (which_id == PROC_EVENT_GID) {
-		ev->event_data.id.r.rgid = cred->gid;
-		ev->event_data.id.e.egid = cred->egid;
+		ev->event_data.id.r.rgid = from_kgid_munged(&init_user_ns, cred->gid);
+		ev->event_data.id.e.egid = from_kgid_munged(&init_user_ns, cred->egid);
 	} else {
 		rcu_read_unlock();
 	     	return;
