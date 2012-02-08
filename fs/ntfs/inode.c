@@ -567,8 +567,8 @@ static int ntfs_read_locked_inode(struct inode *vi)
 	 */
 	vi->i_version = 1;
 
-	vi->i_uid = vol->uid;
-	vi->i_gid = vol->gid;
+	i_uid_write(vi, vol->uid);
+	i_gid_write(vi, vol->gid);
 	vi->i_mode = 0;
 
 	/*
@@ -2124,7 +2124,8 @@ int ntfs_read_inode_mount(struct inode *vi)
 			 * ntfs_read_inode() will have set up the default ones.
 			 */
 			/* Set uid and gid to root. */
-			vi->i_uid = vi->i_gid = 0;
+			vi->i_uid = GLOBAL_ROOT_UID;
+			vi->i_gid = GLOBAL_ROOT_GID;
 			/* Regular file. No access for anyone. */
 			vi->i_mode = S_IFREG;
 			/* No VFS initiated operations allowed for $MFT. */

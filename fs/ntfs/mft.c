@@ -2648,8 +2648,8 @@ mft_rec_already_initialized:
 		vi->i_version = 1;
 
 		/* The owner and group come from the ntfs volume. */
-		vi->i_uid = vol->uid;
-		vi->i_gid = vol->gid;
+		i_uid_write(vi, vol->uid);
+		i_gid_write(vi, vol->gid);
 
 		/* Initialize the ntfs specific part of @vi. */
 		ntfs_init_big_inode(vi);
