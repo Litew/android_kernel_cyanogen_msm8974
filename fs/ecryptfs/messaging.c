@@ -33,7 +33,7 @@ static struct hlist_head *ecryptfs_daemon_hash;
 struct mutex ecryptfs_daemon_hash_mux;
 static int ecryptfs_hash_bits;
 #define ecryptfs_uid_hash(uid) \
-        hash_long((unsigned long)uid, ecryptfs_hash_bits)
+        hash_long((unsigned long)from_kuid(&init_user_ns, uid), ecryptfs_hash_bits)
 
 static u32 ecryptfs_msg_counter;
 static struct ecryptfs_msg_ctx *ecryptfs_msg_ctx_arr;
@@ -106,7 +106,6 @@ void ecryptfs_msg_ctx_alloc_to_free(struct ecryptfs_msg_ctx *msg_ctx)
 /**
  * ecryptfs_find_daemon_by_euid
  * @euid: The effective user id which maps to the desired daemon id
- * @user_ns: The namespace in which @euid applies
  * @daemon: If return value is zero, points to the desired daemon pointer
  *
  * Must be called with ecryptfs_daemon_hash_mux held.
@@ -115,8 +114,7 @@ void ecryptfs_msg_ctx_alloc_to_free(struct ecryptfs_msg_ctx *msg_ctx)
  *
  * Returns zero if the user id exists in the list; non-zero otherwise.
  */
-int ecryptfs_find_daemon_by_euid(struct ecryptfs_daemon **daemon, uid_t euid,
-				 struct user_namespace *user_ns)
+int ecryptfs_find_daemon_by_euid(struct ecryptfs_daemon **daemon, kuid_t euid)
 {
 	struct hlist_node *elem;
 	int rc;
@@ -124,7 +122,7 @@ int ecryptfs_find_daemon_by_euid(struct ecryptfs_daemon **daemon, uid_t euid,
 	hlist_for_each_entry(*daemon, elem,
 			     &ecryptfs_daemon_hash[ecryptfs_uid_hash(euid)],
 			     euid_chain) {
-		if ((*daemon)->euid == euid && (*daemon)->user_ns == user_ns) {
+		if (uid_eq((*daemon)->euid, euid)) {
 			rc = 0;
 			goto out;
 		}
@@ -138,7 +136,6 @@ out:
  * ecryptfs_spawn_daemon - Create and initialize a new daemon struct
  * @daemon: Pointer to set to newly allocated daemon struct
  * @euid: Effective user id for the daemon
- * @user_ns: The namespace in which @euid applies
  * @pid: Process id for the daemon
  *
  * Must be called ceremoniously while in possession of
@@ -147,8 +144,8 @@ out:
  * Returns zero on success; non-zero otherwise
  */
 int
-ecryptfs_spawn_daemon(struct ecryptfs_daemon **daemon, uid_t euid,
-		      struct user_namespace *user_ns, struct pid *pid)
+ecryptfs_spawn_daemon(struct ecryptfs_daemon **daemon, kuid_t euid,
+		      struct pid *pid)
 {
 	int rc = 0;
 
@@ -160,7 +157,6 @@ ecryptfs_spawn_daemon(struct ecryptfs_daemon **daemon, uid_t euid,
 		goto out;
 	}
 	(*daemon)->euid = euid;
-	(*daemon)->user_ns = get_user_ns(user_ns);
 	(*daemon)->pid = get_pid(pid);
 	(*daemon)->task = current;
 	mutex_init(&(*daemon)->mux);
@@ -207,8 +203,6 @@ int ecryptfs_exorcise_daemon(struct ecryptfs_daemon *daemon)
 		wake_up_process(daemon->task);
 	if (daemon->pid)
 		put_pid(daemon->pid);
-	if (daemon->user_ns)
-		put_user_ns(daemon->user_ns);
 	mutex_unlock(&daemon->mux);
 	kzfree(daemon);
 out:
@@ -218,7 +212,6 @@ out:
 /**
  * ecryptfs_process_quit
  * @euid: The user ID owner of the message
- * @user_ns: The namespace in which @euid applies
  * @pid: The process ID for the userspace program that sent the
  *       message
  *
@@ -226,18 +219,18 @@ out:
  * it is the registered that is requesting the deletion. Returns zero
  * after deleting the desired daemon; non-zero otherwise.
  */
-int ecryptfs_process_quit(uid_t euid, struct user_namespace *user_ns,
-			  struct pid *pid)
+int ecryptfs_process_quit(kuid_t euid, struct pid *pid)
 {
 	struct ecryptfs_daemon *daemon;
 	int rc;
 
 	mutex_lock(&ecryptfs_daemon_hash_mux);
-	rc = ecryptfs_find_daemon_by_euid(&daemon, euid, user_ns);
+	rc = ecryptfs_find_daemon_by_euid(&daemon, euid);
 	if (rc || !daemon) {
 		rc = -EINVAL;
 		printk(KERN_ERR "Received request from user [%d] to "
-		       "unregister unrecognized daemon [0x%p]\n", euid, pid);
+		       "unregister unrecognized daemon [0x%p]\n",
+			from_kuid(&init_user_ns, euid), pid);
 		goto out_unlock;
 	}
 	rc = ecryptfs_exorcise_daemon(daemon);
@@ -270,16 +263,14 @@ out_unlock:
  *
  * Returns zero on success; non-zero otherwise
  */
-int ecryptfs_process_response(struct ecryptfs_message *msg, uid_t euid,
-			      struct user_namespace *user_ns, struct pid *pid,
-			      u32 seq)
+int ecryptfs_process_response(struct ecryptfs_message *msg, kuid_t euid,
+			      struct pid *pid, u32 seq)
 {
 	struct ecryptfs_daemon *uninitialized_var(daemon);
 	struct ecryptfs_msg_ctx *msg_ctx;
 	size_t msg_size;
 	struct nsproxy *nsproxy;
-	struct user_namespace *tsk_user_ns;
-	uid_t ctx_euid;
+	kuid_t ctx_euid;
 	int rc;
 
 	if (msg->index >= ecryptfs_message_buf_len) {
@@ -303,9 +294,8 @@ int ecryptfs_process_response(struct ecryptfs_message *msg, uid_t euid,
 		mutex_unlock(&ecryptfs_daemon_hash_mux);
 		goto wake_up;
 	}
-	tsk_user_ns = __task_cred(msg_ctx->task)->user_ns;
 	ctx_euid = task_euid(msg_ctx->task);
-	rc = ecryptfs_find_daemon_by_euid(&daemon, ctx_euid, tsk_user_ns);
+	rc = ecryptfs_find_daemon_by_euid(&daemon, ctx_euid);
 	rcu_read_unlock();
 	mutex_unlock(&ecryptfs_daemon_hash_mux);
 	if (rc) {
@@ -313,28 +303,22 @@ int ecryptfs_process_response(struct ecryptfs_message *msg, uid_t euid,
 		printk(KERN_WARNING "%s: User [%d] received a "
 		       "message response from process [0x%p] but does "
 		       "not have a registered daemon\n", __func__,
-		       ctx_euid, pid);
+		       from_kuid(&init_user_ns, ctx_euid), pid);
 		goto wake_up;
 	}
-	if (ctx_euid != euid) {
+	if (!uid_eq(ctx_euid, euid)) {
 		rc = -EBADMSG;
 		printk(KERN_WARNING "%s: Received message from user "
 		       "[%d]; expected message from user [%d]\n", __func__,
-		       euid, ctx_euid);
-		goto unlock;
-	}
-	if (tsk_user_ns != user_ns) {
-		rc = -EBADMSG;
-		printk(KERN_WARNING "%s: Received message from user_ns "
-		       "[0x%p]; expected message from user_ns [0x%p]\n",
-		       __func__, user_ns, tsk_user_ns);
+		       from_kuid(&init_user_ns, euid),
+		       from_kuid(&init_user_ns, ctx_euid));
 		goto unlock;
 	}
 	if (daemon->pid != pid) {
 		rc = -EBADMSG;
 		printk(KERN_ERR "%s: User [%d] sent a message response "
 		       "from an unrecognized process [0x%p]\n",
-		       __func__, ctx_euid, pid);
+		       __func__, from_kuid(&init_user_ns, ctx_euid), pid);
 		goto unlock;
 	}
 	if (msg_ctx->state != ECRYPTFS_MSG_CTX_STATE_PENDING) {
@@ -383,14 +367,14 @@ ecryptfs_send_message_locked(char *data, int data_len, u8 msg_type,
 			     struct ecryptfs_msg_ctx **msg_ctx)
 {
 	struct ecryptfs_daemon *daemon;
-	uid_t euid = current_euid();
+	kuid_t euid = current_euid();
 	int rc;
 
-	rc = ecryptfs_find_daemon_by_euid(&daemon, euid, current_user_ns());
+	rc = ecryptfs_find_daemon_by_euid(&daemon, euid);
 	if (rc || !daemon) {
 		rc = -ENOTCONN;
-		printk(KERN_ERR "%s: User [%d] does not have a daemon "
-		       "registered\n", __func__, euid);
+		printk(KERN_ERR "%s: User [%d] does not have a daemon registered\n",
+		        __func__, from_kuid(&init_user_ns, euid));
 		goto out;
 	}
 	mutex_lock(&ecryptfs_msg_ctx_lists_mux);
