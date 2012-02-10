@@ -3080,16 +3080,16 @@ static int copy_from_dinode(struct dinode * dip, struct inode *ip)
 
 	jfs_ip->saved_uid = le32_to_cpu(dip->di_uid);
 	if (sbi->uid == -1)
-		ip->i_uid = jfs_ip->saved_uid;
+		i_uid_write(ip, jfs_ip->saved_uid);
 	else {
-		ip->i_uid = sbi->uid;
+		i_uid_write(ip, sbi->uid);
 	}
 
 	jfs_ip->saved_gid = le32_to_cpu(dip->di_gid);
 	if (sbi->gid == -1)
-		ip->i_gid = jfs_ip->saved_gid;
+		i_gid_write(ip, jfs_ip->saved_gid);
 	else {
-		ip->i_gid = sbi->gid;
+		i_gid_write(ip, sbi->gid);
 	}
 
 	ip->i_size = le64_to_cpu(dip->di_size);
@@ -3151,11 +3151,11 @@ static void copy_to_dinode(struct dinode * dip, struct inode *ip)
 	dip->di_nblocks = cpu_to_le64(PBLK2LBLK(ip->i_sb, ip->i_blocks));
 	dip->di_nlink = cpu_to_le32(ip->i_nlink);
 	if (sbi->uid == -1)
-		dip->di_uid = cpu_to_le32(ip->i_uid);
+		dip->di_uid = cpu_to_le32(i_uid_read(ip));
 	else
 		dip->di_uid = cpu_to_le32(jfs_ip->saved_uid);
 	if (sbi->gid == -1)
-		dip->di_gid = cpu_to_le32(ip->i_gid);
+		dip->di_gid = cpu_to_le32(i_gid_read(ip));
 	else
 		dip->di_gid = cpu_to_le32(jfs_ip->saved_gid);
 	jfs_get_inode_flags(jfs_ip);
