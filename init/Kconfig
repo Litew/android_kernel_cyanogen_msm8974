@@ -869,7 +869,6 @@ config UIDGID_CONVERTED
 	depends on EVM = n
 
 	# Filesystems
-	depends on UFS_FS = n
 	depends on VXFS_FS = n
 	depends on XFS_FS = n
 
