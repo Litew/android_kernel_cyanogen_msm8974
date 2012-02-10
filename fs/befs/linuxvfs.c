@@ -15,6 +15,7 @@
 #include <linux/vfs.h>
 #include <linux/parser.h>
 #include <linux/namei.h>
+#include <linux/sched.h>
 
 #include "befs.h"
 #include "btree.h"
@@ -352,9 +353,11 @@ static struct inode *befs_iget(struct super_block *sb, unsigned long ino)
 	 */   
 
 	inode->i_uid = befs_sb->mount_opts.use_uid ?
-	    befs_sb->mount_opts.uid : (uid_t) fs32_to_cpu(sb, raw_inode->uid);
+		befs_sb->mount_opts.uid :
+		make_kuid(&init_user_ns, fs32_to_cpu(sb, raw_inode->uid));
 	inode->i_gid = befs_sb->mount_opts.use_gid ?
-	    befs_sb->mount_opts.gid : (gid_t) fs32_to_cpu(sb, raw_inode->gid);
+		befs_sb->mount_opts.gid :
+		make_kgid(&init_user_ns, fs32_to_cpu(sb, raw_inode->gid));
 
 	set_nlink(inode, 1);
 
@@ -676,8 +679,8 @@ parse_options(char *options, befs_mount_options * opts)
 	int option;
 
 	/* Initialize options */
-	opts->uid = 0;
-	opts->gid = 0;
+	opts->uid = GLOBAL_ROOT_UID;
+	opts->gid = GLOBAL_ROOT_GID;
 	opts->use_uid = 0;
 	opts->use_gid = 0;
 	opts->iocharset = NULL;
@@ -701,7 +704,7 @@ parse_options(char *options, befs_mount_options * opts)
 						"using default\n", option);
 				break;
 			}
-			opts->uid = option;
+			opts->uid = make_kuid(current_user_ns(), option);
 			opts->use_uid = 1;
 			break;
 		case Opt_gid:
@@ -712,7 +715,7 @@ parse_options(char *options, befs_mount_options * opts)
 						"using default\n", option);
 				break;
 			}
-			opts->gid = option;
+			opts->gid = make_kgid(current_user_ns(), option);
 			opts->use_gid = 1;
 			break;
 		case Opt_charset:
