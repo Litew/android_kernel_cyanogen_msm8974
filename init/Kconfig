@@ -869,7 +869,6 @@ config UIDGID_CONVERTED
 	depends on EVM = n
 
 	# Filesystems
-	depends on MINIX_FS = n
 	depends on NCP_FS = n
 	depends on NFSD = n
 	depends on NFS_FS = n
