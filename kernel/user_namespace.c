@@ -215,6 +215,9 @@ EXPORT_SYMBOL(from_kuid);
  *	system call and failing to provide a valid uid are not an
  *	options.
  *
+ *	If @kuid has no mapping but will be granted super user
+ *	privileges over users in @targ 0 is returned.
+ *
  *	If @kuid has no mapping in @targ overflowuid is returned.
  */
 uid_t from_kuid_munged(struct user_namespace *targ, kuid_t kuid)
@@ -222,8 +225,23 @@ uid_t from_kuid_munged(struct user_namespace *targ, kuid_t kuid)
 	uid_t uid;
 	uid = from_kuid(targ, kuid);
 
-	if (uid == (uid_t) -1)
+	if (uid == (uid_t) -1) {
+		struct user_namespace *ns;
+
 		uid = overflowuid;
+
+		/* Is kuid the creator of the target user_ns
+		 * or the creator of one of it's parents?
+		 */
+		for (ns = targ;; ns = ns->parent) {
+			if (uid_eq(ns->owner, kuid)) {
+				uid = (uid_t) 0;
+				break;
+			}
+			if (ns == &init_user_ns)
+				break;
+		}
+	}
 	return uid;
 }
 EXPORT_SYMBOL(from_kuid_munged);
@@ -282,6 +300,9 @@ EXPORT_SYMBOL(from_kgid);
  *	for use in syscalls like stat and getgid where failing the
  *	system call and failing to provide a valid gid are not options.
  *
+ *	If @kuid has no mapping but will be granted super user
+ *	privileges over users in @targ 0 is returned.
+ *
  *	If @kgid has no mapping in @targ overflowgid is returned.
  */
 gid_t from_kgid_munged(struct user_namespace *targ, kgid_t kgid)
@@ -289,8 +310,23 @@ gid_t from_kgid_munged(struct user_namespace *targ, kgid_t kgid)
 	gid_t gid;
 	gid = from_kgid(targ, kgid);
 
-	if (gid == (gid_t) -1)
+	if (gid == (gid_t) -1) {
+		struct user_namespace *ns;
+
 		gid = overflowgid;
+
+		/* Is kgid the creator of the target user_ns
+		 * or the creator of one of it's parents?
+		 */
+		for (ns = targ;; ns = ns->parent) {
+			if (gid_eq(ns->group, kgid)) {
+				gid = (uid_t) 0;
+				break;
+			}
+			if (ns == &init_user_ns)
+				break;
+		}
+	}
 	return gid;
 }
 EXPORT_SYMBOL(from_kgid_munged);
