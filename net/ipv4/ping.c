@@ -249,7 +249,7 @@ static void inet_get_ping_group_range_net(struct net *net, gid_t *low,
 int ping_init_sock(struct sock *sk)
 {
 	struct net *net = sock_net(sk);
-	gid_t group = current_egid();
+	kgid_t group = current_egid();
 	gid_t range[2];
 	struct group_info *group_info = get_current_groups();
 	int i, j, count = group_info->ngroups;
@@ -261,7 +261,7 @@ int ping_init_sock(struct sock *sk)
 	if (!gid_valid(low) || !gid_valid(high) || gid_lt(high, low))
 		return -EACCES;
 
-	if (range[0] <= group && group <= range[1])
+	if (gid_lte(low, group) && gid_lte(group, high))
 		return 0;
 
 	for (i = 0; i < group_info->nblocks; i++) {
