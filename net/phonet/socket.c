@@ -611,7 +611,7 @@ static int pn_sock_seq_show(struct seq_file *seq, void *v)
 			sk->sk_protocol, pn->sobject, pn->dobject,
 			pn->resource, sk->sk_state,
 			sk_wmem_alloc_get(sk), sk_rmem_alloc_get(sk),
-			sock_i_uid(sk), sock_i_ino(sk),
+			sock_seq_i_uid(seq, sk), sock_i_ino(sk),
 			atomic_read(&sk->sk_refcnt), sk,
 			atomic_read(&sk->sk_drops));
 	}
@@ -793,9 +793,8 @@ static int pn_res_seq_show(struct seq_file *seq, void *v)
 		struct sock **psk = v;
 		struct sock *sk = *psk;
 
-		seq_printf(seq, "%02X %5d %lu",
-			   (int) (psk - pnres.sk),
-			   from_kuid_munged(seq_user_ns(seq), sock_i_uid(sk)),
+		seq_printf(seq, "%02X %5d %lu%n",
+			   (int) (psk - pnres.sk), sock_seq_i_uid(seq, sk),
 			   sock_i_ino(sk));
 	}
 	seq_pad(seq, '\n');
