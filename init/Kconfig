@@ -863,10 +863,6 @@ config UIDGID_CONVERTED
 	bool
 	default y
 
-	# List of kernel pieces that need user namespace work
-	# Features
-	depends on IMA = n
-
 	# The rare drivers that won't build
 	depends on ANDROID_BINDER_IPC = n
 
