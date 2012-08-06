@@ -5660,7 +5660,7 @@ static void sctp_unhash(struct sock *sk)
  * a fastreuse flag (FIXME: NPI ipg).
  */
 static struct sctp_bind_bucket *sctp_bucket_create(
-	struct sctp_bind_hashbucket *head, unsigned short snum);
+	struct sctp_bind_hashbucket *head, struct net *, unsigned short snum);
 
 static long sctp_get_port_local(struct sock *sk, union sctp_addr *addr)
 {
@@ -5690,11 +5690,12 @@ static long sctp_get_port_local(struct sock *sk, union sctp_addr *addr)
 				rover = low;
 			if (inet_is_reserved_local_port(rover))
 				continue;
-			index = sctp_phashfn(rover);
+			index = sctp_phashfn(sock_net(sk), rover);
 			head = &sctp_port_hashtable[index];
 			sctp_spin_lock(&head->lock);
 			sctp_for_each_hentry(pp, node, &head->chain)
-				if (pp->port == rover)
+				if ((pp->port == rover) &&
+				    net_eq(sock_net(sk), pp->net))
 					goto next;
 			break;
 		next:
@@ -5718,10 +5719,10 @@ static long sctp_get_port_local(struct sock *sk, union sctp_addr *addr)
 		 * to the port number (snum) - we detect that with the
 		 * port iterator, pp being NULL.
 		 */
-		head = &sctp_port_hashtable[sctp_phashfn(snum)];
+		head = &sctp_port_hashtable[sctp_phashfn(sock_net(sk), snum)];
 		sctp_spin_lock(&head->lock);
 		sctp_for_each_hentry(pp, node, &head->chain) {
-			if (pp->port == snum)
+			if ((pp->port == snum) && net_eq(pp->net, sock_net(sk)))
 				goto pp_found;
 		}
 	}
@@ -5772,7 +5773,7 @@ pp_found:
 pp_not_found:
 	/* If there was a hash table miss, create a new port.  */
 	ret = 1;
-	if (!pp && !(pp = sctp_bucket_create(head, snum)))
+	if (!pp && !(pp = sctp_bucket_create(head, sock_net(sk), snum)))
 		goto fail_unlock;
 
 	/* In either case (hit or miss), make sure fastreuse is 1 only
@@ -6006,7 +6007,7 @@ unsigned int sctp_poll(struct file *file, struct socket *sock, poll_table *wait)
  ********************************************************************/
 
 static struct sctp_bind_bucket *sctp_bucket_create(
-	struct sctp_bind_hashbucket *head, unsigned short snum)
+	struct sctp_bind_hashbucket *head, struct net *net, unsigned short snum)
 {
 	struct sctp_bind_bucket *pp;
 
@@ -6016,6 +6017,7 @@ static struct sctp_bind_bucket *sctp_bucket_create(
 		pp->port = snum;
 		pp->fastreuse = 0;
 		INIT_HLIST_HEAD(&pp->owner);
+		pp->net = net;
 		hlist_add_head(&pp->node, &head->chain);
 	}
 	return pp;
@@ -6035,7 +6037,8 @@ static void sctp_bucket_destroy(struct sctp_bind_bucket *pp)
 static inline void __sctp_put_port(struct sock *sk)
 {
 	struct sctp_bind_hashbucket *head =
-		&sctp_port_hashtable[sctp_phashfn(inet_sk(sk)->inet_num)];
+		&sctp_port_hashtable[sctp_phashfn(sock_net(sk),
+						  inet_sk(sk)->inet_num)];
 	struct sctp_bind_bucket *pp;
 
 	sctp_spin_lock(&head->lock);
@@ -6702,7 +6705,8 @@ static void sctp_sock_migrate(struct sock *oldsk, struct sock *newsk,
 	newsp->hmac = NULL;
 
 	/* Hook this new socket in to the bind_hash list. */
-	head = &sctp_port_hashtable[sctp_phashfn(inet_sk(oldsk)->inet_num)];
+	head = &sctp_port_hashtable[sctp_phashfn(sock_net(oldsk),
+						 inet_sk(oldsk)->inet_num)];
 	sctp_local_bh_disable();
 	sctp_spin_lock(&head->lock);
 	pp = sctp_sk(oldsk)->bind_hash;
