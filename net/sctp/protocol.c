@@ -1167,6 +1167,10 @@ static int sctp_net_init(struct net *net)
 {
 	int status;
 
+	status = sctp_sysctl_net_register(net);
+	if (status)
+		goto err_sysctl_register;
+
 	/* Allocate and initialise sctp mibs.  */
 	status = init_sctp_mibs(net);
 	if (status)
@@ -1206,6 +1210,8 @@ err_ctl_sock_init:
 err_init_proc:
 	cleanup_sctp_mibs(net);
 err_init_mibs:
+	sctp_sysctl_net_unregister(net);
+err_sysctl_register:
 	return status;
 }
 
@@ -1222,6 +1228,7 @@ static void sctp_net_exit(struct net *net)
 
 	sctp_proc_exit(net);
 	cleanup_sctp_mibs(net);
+	sctp_sysctl_net_unregister(net);
 }
 
 static struct pernet_operations sctp_net_ops = {
