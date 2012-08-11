@@ -209,6 +209,60 @@ struct osf_statfs {
 	__kernel_fsid_t f_fsid;
 };
 
+struct osf_statfs64 {
+	short f_type;
+	short f_flags;
+	int f_pad1;
+	int f_pad2;
+	int f_pad3;
+	int f_pad4;
+	int f_pad5;
+	int f_pad6;
+	int f_pad7;
+	__kernel_fsid_t f_fsid;
+	u_short f_namemax;
+	short f_reserved1;
+	int f_spare[8];
+	char f_pad8[90];
+	char f_pad9[90];
+	long mount_info[10];
+	u_long f_flags2;
+	long f_spare2[14];
+	long f_fsize;
+	long f_bsize;
+	long f_blocks;
+	long f_bfree;
+	long f_bavail;
+	long f_files;
+	long f_ffree;
+};
+
+static int
+linux_to_osf_stat(struct kstat *lstat, struct osf_stat __user *osf_stat)
+{
+	struct osf_stat tmp = { 0 };
+
+	tmp.st_dev	= lstat->dev;
+	tmp.st_mode	= lstat->mode;
+	tmp.st_nlink	= lstat->nlink;
+	tmp.st_uid	= from_kuid_munged(current_user_ns(), lstat->uid);
+	tmp.st_gid	= from_kgid_munged(current_user_ns(), lstat->gid);
+	tmp.st_rdev	= lstat->rdev;
+	tmp.st_ldev	= lstat->rdev;
+	tmp.st_size	= lstat->size;
+	tmp.st_uatime	= lstat->atime.tv_nsec / 1000;
+	tmp.st_umtime	= lstat->mtime.tv_nsec / 1000;
+	tmp.st_uctime	= lstat->ctime.tv_nsec / 1000;
+	tmp.st_ino	= lstat->ino;
+	tmp.st_atime	= lstat->atime.tv_sec;
+	tmp.st_mtime	= lstat->mtime.tv_sec;
+	tmp.st_ctime	= lstat->ctime.tv_sec;
+	tmp.st_blksize	= lstat->blksize;
+	tmp.st_blocks	= lstat->blocks;
+
+	return copy_to_user(osf_stat, &tmp, sizeof(tmp)) ? -EFAULT : 0;
+}
+
 static int
 linux_to_osf_statfs(struct kstatfs *linux_stat, struct osf_statfs __user *osf_stat,
 		    unsigned long bufsiz)
