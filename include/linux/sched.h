@@ -1452,7 +1452,7 @@ struct task_struct {
 	sigset_t *notifier_mask;
 	struct audit_context *audit_context;
 #ifdef CONFIG_AUDITSYSCALL
-	uid_t loginuid;
+	kuid_t loginuid;
 	unsigned int sessionid;
 #endif
 	seccomp_t seccomp;
