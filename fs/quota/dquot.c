@@ -812,8 +812,10 @@ static struct dquot *get_empty_dquot(struct super_block *sb, int type)
  *   a) checking for quota flags under dq_list_lock and
  *   b) getting a reference to dquot before we release dq_list_lock
  */
-struct dquot *dqget(struct super_block *sb, unsigned int id, int type)
+struct dquot *dqget(struct super_block *sb, struct kqid qid)
 {
+	unsigned int type = qid.type;
+	unsigned int id = from_kqid(&init_user_ns, qid);
 	unsigned int hashent = hashfn(sb, id, type);
 	struct dquot *dquot = NULL, *empty = NULL;
 
@@ -1373,7 +1375,6 @@ static int dquot_active(const struct inode *inode)
  */
 static void __dquot_initialize(struct inode *inode, int type)
 {
-	unsigned int id = 0;
 	int cnt;
 	struct dquot *got[MAXQUOTAS];
 	struct super_block *sb = inode->i_sb;
@@ -1386,18 +1387,19 @@ static void __dquot_initialize(struct inode *inode, int type)
 
 	/* First get references to structures we might need. */
 	for (cnt = 0; cnt < MAXQUOTAS; cnt++) {
+		struct kqid qid;
 		got[cnt] = NULL;
 		if (type != -1 && cnt != type)
 			continue;
 		switch (cnt) {
 		case USRQUOTA:
-			id = inode->i_uid;
+			qid = make_kqid_uid(inode->i_uid);
 			break;
 		case GRPQUOTA:
-			id = inode->i_gid;
+			qid = make_kqid_gid(inode->i_gid);
 			break;
 		}
-		got[cnt] = dqget(sb, id, cnt);
+		got[cnt] = dqget(sb, qid);
 	}
 
 	down_write(&sb_dqopt(sb)->dqptr_sem);
@@ -1881,9 +1883,9 @@ int dquot_transfer(struct inode *inode, struct iattr *iattr)
 		return 0;
 
 	if (iattr->ia_valid & ATTR_UID && iattr->ia_uid != inode->i_uid)
-		transfer_to[USRQUOTA] = dqget(sb, iattr->ia_uid, USRQUOTA);
+		transfer_to[USRQUOTA] = dqget(sb, make_kqid_uid(iattr->ia_uid));
 	if (iattr->ia_valid & ATTR_GID && iattr->ia_gid != inode->i_gid)
-		transfer_to[GRPQUOTA] = dqget(sb, iattr->ia_gid, GRPQUOTA);
+		transfer_to[GRPQUOTA] = dqget(sb, make_kqid_gid(iattr->ia_gid));
 
 	ret = __dquot_transfer(inode, transfer_to);
 	dqput_all(transfer_to);
@@ -2365,7 +2367,7 @@ int dquot_get_dqblk(struct super_block *sb, struct kqid qid,
 {
 	struct dquot *dquot;
 
-	dquot = dqget(sb, qid.type, from_kqid(&init_user_ns, qid));
+	dquot = dqget(sb, qid);
 	if (!dquot)
 		return -ESRCH;
 	do_get_dqblk(dquot, di);
@@ -2478,7 +2480,7 @@ int dquot_set_dqblk(struct super_block *sb, struct kqid qid,
 	struct dquot *dquot;
 	int rc;
 
-	dquot = dqget(sb, qid.type, from_kqid(&init_user_ns, qid));
+	dquot = dqget(sb, qid);
 	if (!dquot) {
 		rc = -ESRCH;
 		goto out;
