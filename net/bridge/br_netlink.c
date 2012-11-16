@@ -159,6 +159,9 @@ static int br_rtm_setlink(struct sk_buff *skb,  struct nlmsghdr *nlh, void *arg)
 	if (nlmsg_len(nlh) < sizeof(*ifm))
 		return -EINVAL;
 
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
 	ifm = nlmsg_data(nlh);
 	if (ifm->ifi_family != AF_BRIDGE)
 		return -EPFNOSUPPORT;
