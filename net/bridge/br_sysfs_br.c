@@ -36,7 +36,7 @@ static ssize_t store_bridge_parm(struct device *d,
 	unsigned long val;
 	int err;
 
-	if (!capable(CAP_NET_ADMIN))
+	if (!ns_capable(dev_net(br->dev)->user_ns, CAP_NET_ADMIN))
 		return -EPERM;
 
 	val = simple_strtoul(buf, &endp, 0);
@@ -132,7 +132,7 @@ static ssize_t store_stp_state(struct device *d,
 	char *endp;
 	unsigned long val;
 
-	if (!capable(CAP_NET_ADMIN))
+	if (!ns_capable(dev_net(br->dev)->user_ns, CAP_NET_ADMIN))
 		return -EPERM;
 
 	val = simple_strtoul(buf, &endp, 0);
@@ -165,7 +165,7 @@ static ssize_t store_group_fwd_mask(struct device *d,
 	char *endp;
 	unsigned long val;
 
-	if (!capable(CAP_NET_ADMIN))
+	if (!ns_capable(dev_net(br->dev)->user_ns, CAP_NET_ADMIN))
 		return -EPERM;
 
 	val = simple_strtoul(buf, &endp, 0);
@@ -300,7 +300,7 @@ static ssize_t store_group_addr(struct device *d,
 	unsigned new_addr[6];
 	int i;
 
-	if (!capable(CAP_NET_ADMIN))
+	if (!ns_capable(dev_net(br->dev)->user_ns, CAP_NET_ADMIN))
 		return -EPERM;
 
 	if (sscanf(buf, "%x:%x:%x:%x:%x:%x",
@@ -337,7 +337,7 @@ static ssize_t store_flush(struct device *d,
 {
 	struct net_bridge *br = to_bridge(d);
 
-	if (!capable(CAP_NET_ADMIN))
+	if (!ns_capable(dev_net(br->dev)->user_ns, CAP_NET_ADMIN))
 		return -EPERM;
 
 	br_fdb_flush(br);
