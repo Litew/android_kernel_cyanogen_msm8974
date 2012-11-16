@@ -1610,9 +1610,6 @@ static int neigh_delete(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
 	struct net_device *dev = NULL;
 	int err = -EINVAL;
 
-	if (!capable(CAP_NET_ADMIN))
-		return -EPERM;
-
 	ASSERT_RTNL();
 	if (nlmsg_len(nlh) < sizeof(*ndm))
 		goto out;
@@ -1676,9 +1673,6 @@ static int neigh_add(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
 	struct neigh_table *tbl;
 	struct net_device *dev = NULL;
 	int err;
-
-	if (!capable(CAP_NET_ADMIN))
-		return -EPERM;
 
 	ASSERT_RTNL();
 	err = nlmsg_parse(nlh, sizeof(*ndm), tb, NDA_MAX, NULL);
@@ -1955,9 +1949,6 @@ static int neightbl_set(struct sk_buff *skb, struct nlmsghdr *nlh, void *arg)
 	struct ndtmsg *ndtmsg;
 	struct nlattr *tb[NDTA_MAX+1];
 	int err;
-
-	if (!capable(CAP_NET_ADMIN))
-		return -EPERM;
 
 	err = nlmsg_parse(nlh, sizeof(*ndtmsg), tb, NDTA_MAX,
 			  nl_neightbl_policy);
