@@ -8,7 +8,8 @@
 #include <linux/idr.h>
 #include <linux/rculist.h>
 #include <linux/nsproxy.h>
-#include <linux/proc_fs.h>
+#include <linux/fs.h>
+#include <linux/proc_ns.h>
 #include <linux/file.h>
 #include <linux/export.h>
 #include <linux/user_namespace.h>
@@ -332,7 +333,7 @@ EXPORT_SYMBOL_GPL(__put_net);
 
 struct net *get_net_ns_by_fd(int fd)
 {
-	struct proc_inode *ei;
+	struct proc_ns *ei;
 	struct file *file;
 	struct net *net;
 
@@ -340,7 +341,7 @@ struct net *get_net_ns_by_fd(int fd)
 	if (IS_ERR(file))
 		return ERR_CAST(file);
 
-	ei = PROC_I(file->f_dentry->d_inode);
+	ei = get_proc_ns(file_inode(file));
 	if (ei->ns_ops == &netns_operations)
 		net = get_net(ei->ns);
 	else
