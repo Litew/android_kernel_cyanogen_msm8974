@@ -25,7 +25,7 @@ struct qpnp_vib_config {
 	u8			active_low;
 	enum qpnp_vib_en_mode	enable_mode;
 };
-#if defined(CONFIG_QPNP_VIBRATOR)
+#if defined(CONFIG_QPNP_VIBRATOR) || defined(CONFIG_QPNP_VIBRATOR_MEMLESS)
 
 int qpnp_vibrator_config(struct qpnp_vib_config *vib_config);
 #else
