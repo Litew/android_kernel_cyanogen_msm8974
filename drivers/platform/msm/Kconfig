@@ -82,7 +82,7 @@ config QPNP_VIBRATOR
 	  VIB_DRV_N line and can be controlled manually or by the DTEST lines.
 	  It uses the android timed-output framework.
 
-config QPNP_VIBRATOR_FF_MEMLESS
+config QPNP_VIBRATOR_MEMLESS
 	tristate "FF-memless vibrator support for QPNP PMIC"
 	depends on OF_SPMI && INPUT_FF_MEMLESS
 	help
