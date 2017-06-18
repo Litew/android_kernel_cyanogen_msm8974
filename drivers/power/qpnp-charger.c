@@ -5556,7 +5556,7 @@ qpnp_charger_probe(struct spmi_device *spmi)
 #else
 		chip->batt_psy.name = "battery";
 #endif
-		chip->batt_psy.type = POWER_SUPPLY_TYPE_BATTERY;
+		chip->batt_psy.type = POWER_SUPPLY_TYPE_UNKNOWN;
 		chip->batt_psy.properties = msm_batt_power_props;
 		chip->batt_psy.num_properties =
 			ARRAY_SIZE(msm_batt_power_props);
