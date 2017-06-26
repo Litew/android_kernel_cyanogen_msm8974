@@ -32,7 +32,7 @@
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
 #include <net/bluetooth/hci.h>
-#include <mach/msm_smd.h>
+#include <soc/qcom/smd.h>
 
 #define EVENT_CHANNEL		"APPS_RIVA_BT_CMD"
 #define DATA_CHANNEL		"APPS_RIVA_BT_ACL"
@@ -545,10 +545,7 @@ static void hci_smd_deregister_dev(struct hci_smd_data *hsmd)
 		BT_INFO("HCI device un-registration going on");
 
 		if (hsmd->hdev) {
-			if (hci_unregister_dev(hsmd->hdev) < 0)
-				BT_ERR("Can't unregister HCI device %s",
-					hsmd->hdev->name);
-
+			hci_unregister_dev(hsmd->hdev) ;
 			hci_free_dev(hsmd->hdev);
 			hsmd->hdev = NULL;
 		}
