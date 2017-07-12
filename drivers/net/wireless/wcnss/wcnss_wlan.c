@@ -62,6 +62,18 @@
 #define WCNSS_CONFIG_UNSPECIFIED (-1)
 #define UINT32_MAX (0xFFFFFFFFU)
 
+static int param_get_wcnss_is_ready(char *buffer, const struct kernel_param *kp);
+
+const struct kernel_param_ops wcnss_is_ready_ops_int =
+{
+    .set = NULL,
+    .get = &param_get_wcnss_is_ready,
+};
+
+static int wcnss_is_ready = WCNSS_CONFIG_UNSPECIFIED;
+module_param_cb(wcnss_is_ready, &wcnss_is_ready_ops_int, &wcnss_is_ready, S_IRUGO);
+MODULE_PARM_DESC(wcnss_is_ready, "Is WCNSS device ready");
+
 static int has_48mhz_xo = WCNSS_CONFIG_UNSPECIFIED;
 module_param(has_48mhz_xo, int, S_IWUSR | S_IRUGO);
 MODULE_PARM_DESC(has_48mhz_xo, "Is an external 48 MHz XO present");
@@ -1300,11 +1312,21 @@ EXPORT_SYMBOL(wcnss_is_hw_pronto_ver3);
 int wcnss_device_ready(void)
 {
 	if (penv && penv->pdev && penv->nv_downloaded &&
-	    !wcnss_device_is_shutdown())
-		return 1;
+	    !wcnss_device_is_shutdown()) {
+			wcnss_is_ready = 1;
+			return 1;
+	}
+
+	wcnss_is_ready = 0;
 	return 0;
 }
 EXPORT_SYMBOL(wcnss_device_ready);
+
+static int param_get_wcnss_is_ready(char *buffer, const struct kernel_param *kp)
+{
+	wcnss_device_ready();
+	return param_get_int(buffer, kp);
+}
 
 bool wcnss_cbc_complete(void)
 {
