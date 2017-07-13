@@ -48,6 +48,7 @@
 
 	spi@f9927000 {
 		fpc_fpc1020@0 {
+			status = "disabled";
 			compatible = "fpc,fpc1020";
 			reg = <0>;
 			spi-max-frequency = <8000000>;
