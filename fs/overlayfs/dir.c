@@ -38,8 +38,8 @@ static int ovl_whiteout(struct dentry *upperdir, struct dentry *dentry)
 	cap_raise(override_cred->cap_effective, CAP_SYS_ADMIN);
 	cap_raise(override_cred->cap_effective, CAP_DAC_OVERRIDE);
 	cap_raise(override_cred->cap_effective, CAP_FOWNER);
-	override_cred->fsuid = 0;
-	override_cred->fsgid = 0;
+	override_cred->fsuid = GLOBAL_ROOT_UID;
+	override_cred->fsgid = GLOBAL_ROOT_GID;
 	old_cred = override_creds(override_cred);
 
 	newdentry = lookup_one_len(dentry->d_name.name, upperdir,
