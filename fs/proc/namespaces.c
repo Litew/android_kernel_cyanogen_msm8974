@@ -128,7 +128,7 @@ static void *proc_ns_follow_link(struct dentry *dentry, struct nameidata *nd)
 	if (!ptrace_may_access(task, PTRACE_MODE_READ))
 		goto out_put_task;
 
-	ns_dentry = proc_ns_get_dentry(sb, task, ei->ns_ops);
+	ns_dentry = proc_ns_get_dentry(sb, task, ei->ns.ns_ops);
 	if (IS_ERR(ns_dentry)) {
 		error = ERR_CAST(ns_dentry);
 		goto out_put_task;
