@@ -2605,15 +2605,15 @@ static int pp_stats_line(struct proc_print_info *ppi, int cnt_set)
 		tag_t tag = ppi->ts_entry->tn.tag;
 		uid_t stat_uid = get_uid_from_tag(tag);
 		/* Detailed tags are not available to everybody */
-		if (get_atag_from_tag(tag)
-		    && !can_read_other_uid_stats(stat_uid)) {
+		if (get_atag_from_tag(tag) && !can_read_other_uid_stats(
+						make_kuid(&init_user_ns,stat_uid))) {
 			CT_DEBUG("qtaguid: stats line: "
 				 "%s 0x%llx %u: insufficient priv "
 				 "from pid=%u tgid=%u uid=%u stats.gid=%u\n",
 				 ppi->iface_entry->ifname,
 				 get_atag_from_tag(tag), stat_uid,
-				 current->pid, current->tgid, current_fsuid(),
-				 xt_qtaguid_stats_file->gid);
+				 current->pid, current->tgid, from_kuid(&init_user_ns, current_fsuid()),
+				 from_kgid(&init_user_ns,xt_qtaguid_stats_file->gid));
 			return 0;
 		}
 		if (ppi->item_index++ < ppi->items_to_skip)
@@ -2705,7 +2705,7 @@ static int qtaguid_stats_proc_read(char *page, char **num_items_returned,
 	CT_DEBUG("qtaguid:proc stats pid=%u tgid=%u uid=%u "
 		 "page=%p *num_items_returned=%p off=%ld "
 		 "char_count=%d *eof=%d\n",
-		 current->pid, current->tgid, current_fsuid(),
+		 current->pid, current->tgid, from_kuid(&init_user_ns, current_fsuid()),
 		 page, *num_items_returned,
 		 items_to_skip, char_count, *eof);
 
