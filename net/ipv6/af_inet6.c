@@ -65,16 +65,6 @@
 
 #ifdef CONFIG_ANDROID_PARANOID_NETWORK
 #include <linux/android_aid.h>
-
-static inline int current_has_network(void)
-{
-	return in_egroup_p(make_kgid(current_user_ns(), AID_INET)) || capable(CAP_NET_RAW);
-}
-#else
-static inline int current_has_network(void)
-{
-	return 1;
-}
 #endif
 
 MODULE_AUTHOR("Cast of dozens");
@@ -109,6 +99,20 @@ static __inline__ struct ipv6_pinfo *inet6_sk_generic(struct sock *sk)
 
 	return (struct ipv6_pinfo *)(((u8 *)sk) + offset);
 }
+
+#ifdef CONFIG_ANDROID_PARANOID_NETWORK
+static inline int current_has_network(void)
+{
+	return (in_egroup_p(AID_INET) ||
+		in_egroup_p(AID_NET_RAW) ||
+		capable(CAP_NET_RAW));
+}
+# else
+static inline int current_has_network(void)
+{
+	return 1;
+}
+#endif
 
 static int inet6_create(struct net *net, struct socket *sock, int protocol,
 			int kern)

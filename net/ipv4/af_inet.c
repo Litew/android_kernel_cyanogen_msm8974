@@ -121,16 +121,6 @@
 
 #ifdef CONFIG_ANDROID_PARANOID_NETWORK
 #include <linux/android_aid.h>
-
-static inline int current_has_network(void)
-{
-	return in_egroup_p(make_kgid(current_user_ns(), AID_INET)) || capable(CAP_NET_RAW);
-}
-#else
-static inline int current_has_network(void)
-{
-	return 1;
-}
 #endif
 
 /* The inetsw table contains everything that inet_create needs to
@@ -141,6 +131,20 @@ static DEFINE_SPINLOCK(inetsw_lock);
 
 struct ipv4_config ipv4_config;
 EXPORT_SYMBOL(ipv4_config);
+
+#ifdef CONFIG_ANDROID_PARANOID_NETWORK
+static inline int current_has_network(void)
+{
+	return (in_egroup_p(AID_INET) ||
+		in_egroup_p(AID_NET_RAW) ||
+		capable(CAP_NET_RAW));
+}
+# else
+static inline int current_has_network(void)
+{
+	return 1;
+}
+#endif
 
 /* New destruction routine */
 
